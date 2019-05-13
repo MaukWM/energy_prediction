@@ -1,11 +1,15 @@
 import os
+from time import sleep
 
+import numpy as np
 import pandas as pd
 
 # Set some display options to make viewing df.head() more easy.
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.width', 10000000)
+
+DATA_LENGTH = 69986
 
 
 def clean_and_prep_metadata(meta_df, building_id):
@@ -110,6 +114,15 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
 
     # Merge the two dataframe, followed by all my other failed attempts
     merged_df = pd.concat([energy_df, weather_df], axis=1)
+
+    # Change datetime to month and day of the week
+    merged_df['month'] = merged_df.index.month
+    merged_df['weekday'] = merged_df.index.weekday
+
+    # Drop local_15min as we don't need it anymore
+    merged_df = merged_df.reset_index()
+    merged_df = merged_df.drop(columns=['local_15min'])
+
     # weather_df['local_15min'] = weather_df['local_15min'].dt.strftime("%Y-%m-%d %H:%M:%S")
     # merged_df = pd.concat([energy_df, weather_df], join='inner', axis=1)
     # merged_df = energy_df.join(weather_df.set_index('local_15min'), 'local_15min', 'outer')
@@ -134,7 +147,36 @@ def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_d
             print("Preparing", filename)
             df = merge_energy_data_with_metadata(os.path.join(path_to_energy_data_folder, filename), path_to_metadata)
             prepared_df = merge_energy_data_with_weather_data(df, path_to_weather_data)
-            prepared_df.to_csv(os.path.join(output_folder, "p-" + filename))
+            prepared_df.to_csv(os.path.join(output_folder, "p-" + filename), index=False)
 
 
-prepare_data("data/cleaned/building_energy/", "data/buildings_metadata.csv", "data/weather1415.csv", "data/prepared")
+def normalize_data(path_to_data):
+    collected_data = []
+    for filename in os.listdir(path_to_data):
+        if ".csv" in filename:
+            print("Processing", filename)
+            data = np.genfromtxt(os.path.join(path_to_data, filename), delimiter=',', dtype=np.float32)
+            data = np.delete(data, 0, axis=0)
+            data[np.isnan(data)] = 0
+            collected_data.append(data)
+    print("============================")
+    stacked_collected_data = np.stack(collected_data)
+    stacked_collected_data_mean = np.mean(stacked_collected_data, axis=(0, 1))
+    stacked_collected_data_std = np.std(stacked_collected_data, axis=(0, 1))
+    print(np.shape(stacked_collected_data))
+    print("isnan", np.isnan(collected_data))
+    normalize_collected_data = (collected_data - stacked_collected_data_mean) / stacked_collected_data_std
+    print(normalize_collected_data)
+
+
+def interpolate_array(arr):
+    ok = ~np.isnan(arr)
+    xp = ok.ravel().nonzero()[0]
+    fp = arr[~np.isnan(arr)]
+    x = np.isnan(arr).ravel().nonzero()[0]
+    arr[np.isnan(arr)] = np.interp(x, xp, fp)
+    return arr
+
+
+# prepare_data("data/cleaned/building_energy/", "data/buildings_metadata.csv", "data/weather1415.csv", "data/prepared")
+normalize_data("data/prepared")

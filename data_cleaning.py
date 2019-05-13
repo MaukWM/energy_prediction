@@ -136,16 +136,16 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
     for filename in os.listdir(input_folder):
         if ".csv" in filename:
             print("Time cleaning", filename)
-            clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2014', freq="15T", output_folder=output_folder)
+            clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2015', freq="15T", output_folder=output_folder)
 
 
-# time_clean_building_energy()
+time_clean_building_energy()
 
 # analyse_building_energy_data()
 # analyse_building_energy_data("data/cleaned/building_energy/")
 
-print_difference_between_missing_data("data/weather1415.csv", 3600, "localhour")
-print(calculate_percentage_missing_data("data/weather1415.csv", 3600, "localhour"))
+# print_difference_between_missing_data("data/weather1415.csv", 3600, "localhour")
+# print(calculate_percentage_missing_data("data/weather1415.csv", 3600, "localhour"))
 
 # df = pd.read_csv("data/cleaned/building_energy/tc-114-building_data-2014.csv")
 # print(df.head(5))
