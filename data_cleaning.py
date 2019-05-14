@@ -110,6 +110,9 @@ def clean_data_on_time_range(file, t_colname, start, end, freq, output_folder):
     dataset = dataset.set_index(t_colname)
     dataset.index = pd.DatetimeIndex(dataset.index)
 
+    # Drop any possible duplicates
+    dataset = dataset.drop_duplicates()
+
     # Reindex dataset, filling missing data with NaNs from custom time range
     dataset = dataset.reindex(idx, fill_value=None)
 
@@ -119,9 +122,6 @@ def clean_data_on_time_range(file, t_colname, start, end, freq, output_folder):
 
     # Fill any last NaN with 0s
     dataset = dataset.fillna(0)
-
-    # Drop any possible duplicates
-    dataset = dataset.drop_duplicates()
 
     # Write the file
     dataset.to_csv(os.path.join(output_folder, "tc-" + file.split("/")[-1]))
@@ -139,7 +139,9 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
             clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2015', freq="15T", output_folder=output_folder)
 
 
-time_clean_building_energy()
+# time_clean_building_energy()
+
+
 
 # analyse_building_energy_data()
 # analyse_building_energy_data("data/cleaned/building_energy/")
