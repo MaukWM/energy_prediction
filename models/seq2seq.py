@@ -56,16 +56,16 @@ def generate_batches():
     batch_xe = np.stack(batch_xe)
     batch_xd = np.stack(batch_xd)
     batch_y = np.stack(batch_y)
-    print(np.shape(batch_xe))
-    print(np.shape(batch_xd))
-    print(np.shape(batch_y))
-    return [batch_xe, batch_xd], batch_y
+    # print(np.shape(batch_xe))
+    # print(np.shape(batch_xd))
+    # print(np.shape(batch_y))
+    yield [batch_xe, batch_xd], batch_y
 
 
 def build_seq2seq_model():
     """
     Function to build the seq2seq model used.
-    :return: Encoder model, decoder model and full model.
+    :return: Encoder model, decoder model (used for predicting) and full model (used for training).
     """
     # Define model inputs for the encoder/decoder stack
     x_enc = ks.Input(shape=(None, input_feature_amount), name="x_enc")
@@ -101,4 +101,47 @@ def build_seq2seq_model():
     return E, D, encdecmodel
 
 
-print(generate_batches())
+def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
+    # Get the state from the Encoder using the previous timesteps for x
+    # Expand the previous timesteps, we must make the input a batch (going from shape (100, 149) to (1, 100, 149))
+    state = E.predict(np.expand_dims(previous_timesteps_x, axis=0))
+
+    # Initialize the outputs on the previous y so we have something to feed the net
+    # It might be neater to feed a start symbol instead
+    outp = np.expand_dims(previous_y, axis=0)
+    outputs = []
+    for i in range(n_output_timesteps):
+        outp, state = D.predict([outp, state])
+        outputs.append(outp)
+
+    # Concatenate the outputs, as they are batches
+    # For example, going from a list of (1,1,1) to one unit of (1,100,1)
+    # So we take the 0th element from the batch which are our outputs
+    return np.concatenate(outputs, axis=1)[0]
+
+
+if __name__ == "__main__":
+    encoder, decoder, encdecmodel = build_seq2seq_model()
+
+    # encdecmodel.load_weights("model_weights.h5")
+
+    encdecmodel.compile(ks.optimizers.Adam(0.03), ks.losses.mean_squared_error)
+    encdecmodel.fit_generator(generate_batches(), steps_per_epoch=100, epochs=2)
+
+    encdecmodel.save_weights("seq2seq_model_weights.h5")
+
+    x, y = generate_batches().__next__()
+
+    print(x[0], y[0])
+
+    # plt.plot(x[:, 0])
+    # plt.plot(x[:, 1])
+    plt.plot(y)
+
+    predictions = make_prediction(encoder, decoder, x[:100], y[99:100], 100)
+    plt.plot(np.arange(100, 200), predictions)
+    plt.show()
+
+
+
+# print(generate_batches())
