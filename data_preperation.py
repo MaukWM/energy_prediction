@@ -11,7 +11,7 @@ pd.set_option('display.max_rows', 500000)
 pd.set_option('display.width', 10000000)
 
 DATA_LENGTH = 69986
-column_data_to_predict = [28]
+column_data_to_predict = [0]
 
 
 def clean_and_prep_metadata(meta_df, building_id):
