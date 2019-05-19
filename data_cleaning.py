@@ -140,9 +140,9 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
 
 
 # time_clean_building_energy()
-
-
-
+#
+#
+#
 # analyse_building_energy_data()
 # analyse_building_energy_data("data/cleaned/building_energy/")
 

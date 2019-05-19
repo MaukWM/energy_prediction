@@ -11,7 +11,7 @@ pd.set_option('display.max_rows', 500000)
 pd.set_option('display.width', 10000000)
 
 DATA_LENGTH = 69986
-column_data_to_predict = [0]
+column_data_to_predict = [28]  # 0 is use column, 28 is grid column
 
 
 def clean_and_prep_metadata(meta_df, building_id):
@@ -229,12 +229,13 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pi
 
 
 def the_whole_shibang():
-    data_cleaning.time_clean_building_energy()
-    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata.csv", "data/weather1415.csv", "data/prepared/")
+    # data_cleaning.time_clean_building_energy()
+    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered_no_energy_indicator.csv", "data/weather1415.csv", "data/prepared/")
     normalize_and_pickle_prepared_data()
 
 
-# prepare_data("data/cleaned/building_energy/", "data/buildings_metadata.csv", "data/weather1415.csv", "data/prepared")
+
+# prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered.csv", "data/weather1415.csv", "data/prepared")
 # normalize_data("data/prepared")
 # normalize_and_pickle_prepared_data()
 the_whole_shibang()
