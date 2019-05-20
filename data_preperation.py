@@ -229,8 +229,8 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pi
 
 
 def the_whole_shibang():
-    # data_cleaning.time_clean_building_energy()
-    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered_no_energy_indicator.csv", "data/weather1415.csv", "data/prepared/")
+    data_cleaning.time_clean_building_energy()
+    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata.csv", "data/weather1415.csv", "data/prepared/")
     normalize_and_pickle_prepared_data()
 
 

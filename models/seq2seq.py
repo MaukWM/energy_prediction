@@ -6,40 +6,79 @@ import matplotlib.pyplot as plt
 import metrics
 
 # Define some variables for generating batches
-buildings = 15
+buildings = 7
 batch_size = 512
 
 # Define the amount of features in the input and the output
-input_feature_amount = 83
+input_feature_amount = 149
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 128
+state_size = 32
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 2
+seq_len_in = 96
 seq_len_out = 96
 
-# Load in the prepared data
-input_data = open("../data/prepared/input_data.pkl", "rb")
-normalized_input_data, output_data = pickle.load(input_data)
+# # Load in the prepared data
+# input_data = open("../data/prepared/input_data.pkl", "rb")
+# normalized_input_data, output_data = pickle.load(input_data)
+#
+# # Define the input and output of the testing set
+# test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
+#
+# # Change the length so we can generate batches from test_x and test_y
+# new_len = (seq_len_in + seq_len_out) * (test_x.shape[1] // (seq_len_in + seq_len_out))
+# test_x, test_y = test_x[:, :new_len], test_y[:, :new_len]
+#
+# # Make them batches
+# test_x_batches = np.reshape(test_x, (-1, (seq_len_in + seq_len_out), input_feature_amount))
+# test_y_batches = np.reshape(test_y, (-1, (seq_len_in + seq_len_out), output_feature_amount))
+#
+# # Set the batches
+# test_xe_batches = test_x_batches[:, :seq_len_in]
+# test_xd_batches = test_y_batches[:, seq_len_in-1:-1]
+# test_x_batches = [test_xe_batches, test_xd_batches]
+# test_y_batches = test_y_batches[:, seq_len_in:]
 
-# Define the input and output of the testing set
-test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
 
-# Change the length so we can generate batches from test_x and test_y
-new_len = (seq_len_in + seq_len_out) * (test_x.shape[1] // (seq_len_in + seq_len_out))
-test_x, test_y = test_x[:, :new_len], test_y[:, :new_len]
+def generate_validation_data():
+    """
+    Generate validation data of the whole testing set.
+    :return: the validation data
+    """
+    input_data = open("../data/prepared/input_data.pkl", "rb")
+    normalized_input_data, output_data = pickle.load(input_data)
 
-# Make them batches
-test_x_batches = np.reshape(test_x, (-1, (seq_len_in + seq_len_out), input_feature_amount))
-test_y_batches = np.reshape(test_y, (-1, (seq_len_in + seq_len_out), output_feature_amount))
+    print(np.shape(normalized_input_data))
 
-# Set the batches
-test_xe_batches = test_x_batches[:, :seq_len_in]
-test_xd_batches = test_y_batches[:, seq_len_in-1:-1]
-test_x_batches = [test_xe_batches, test_xd_batches]
-test_y_batches = test_y_batches[:, seq_len_in:]
+    test_xe_batches = []
+    test_xd_batches = []
+    test_y_batches = []
+    # test_y_batches_prev = []
+
+    for i in range(len(normalized_input_data)):
+        for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
+            #  Change modulo operation to change interval
+            if j % 16 == 0:
+                test_xe_batches.append(normalized_input_data[i][j:j+seq_len_in])
+                test_xd_batches.append(output_data[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
+                test_y_batches.append(output_data[i][j + seq_len_in:j + seq_len_in + seq_len_out])
+                # test_y_batches_prev.append(output_data[i][j: j + seq_len_in])
+
+    # normal_shape = None
+    # for e in test_xe_batches:
+    #     if normal_shape is None:
+    #         normal_shape = e.shape
+    #     if e.shape != normal_shape:
+    #         raise Exception("HET IS STUK", normal_shape, e.shape)
+
+    test_xe_batches = np.stack(test_xe_batches, axis=0)
+    test_xd_batches = np.stack(test_xd_batches, axis=0)
+    test_y_batches = np.stack(test_y_batches, axis=0)
+    # test_y_batches_prev = np.stack(test_y_batches, axis=0)
+
+    return [test_xe_batches, test_xd_batches], test_y_batches # , test_y_batches_prev
 
 
 def generate_batches():
@@ -50,10 +89,10 @@ def generate_batches():
     # Read data
     input_data = open("../data/prepared/input_data.pkl", "rb")
     normalized_input_data, output_data = pickle.load(input_data)
+
     while True:
         # Split into training and testing set
         train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//2], output_data[:, :output_data.shape[1]//2]
-        # test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
 
         # Batch input for encoder
         batch_xe = []
@@ -78,10 +117,47 @@ def generate_batches():
         batch_xe = np.stack(batch_xe)
         batch_xd = np.stack(batch_xd)
         batch_y = np.stack(batch_y)
-        # print(np.shape(batch_xe))
-        # print(np.shape(batch_xd))
-        # print(np.shape(batch_y))
         yield [batch_xe, batch_xd], batch_y
+
+
+def generate_validation_sample():
+    """
+    Generate batch to be used for validation, also return the previous ys so we can plot the input as well
+    :return: Batch for encoder and decoder inputs and a batch for output
+    """
+    # Read data
+    input_data = open("../data/prepared/input_data.pkl", "rb")
+    normalized_input_data, output_data = pickle.load(input_data)
+
+    # Split into training and testing set
+    test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
+
+    # Batch input for encoder
+    batch_xe = []
+    # Batch input for decoder for guided training
+    batch_xd = []
+    # Batch output
+    batch_y = []
+
+    # Select a random building from the training set
+    bd = np.random.randint(0, len(test_x))
+
+    # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
+    sp = np.random.randint(0, len(test_x[bd]) - seq_len_in - seq_len_out)
+
+    # Append sample to batch
+    batch_xe.append(test_x[bd][sp:sp + seq_len_in])
+    batch_xd.append(test_y[bd][sp + seq_len_in - 1:sp + seq_len_in + seq_len_out - 1])
+    batch_y.append(test_y[bd][sp + seq_len_in:sp + seq_len_in + seq_len_out])
+
+    # Output during input frames
+    batch_y_prev = test_y[bd][sp:sp + seq_len_in]
+
+    # Stack batches and return them
+    batch_xe = np.stack(batch_xe)
+    batch_xd = np.stack(batch_xd)
+    batch_y = np.stack(batch_y)
+    return [batch_xe, batch_xd], batch_y, batch_y_prev
 
 
 def build_seq2seq_model(use_noise=False):
@@ -161,6 +237,23 @@ def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
 
 def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, intermediates=1, load_weights_path=None,
           save_weights=True, save_weights_path=None, plot_loss=True, plot_yscale='linear'):
+    """
+    Train the model
+    :param encdecmodel: Encoder-decoder stack
+    :param steps_per_epoch: How many steps per epoch should be done
+    :param epochs: Amount of epochs
+    :param validation_data: Validation data
+    :param learning_rate: Learning rate
+    :param intermediates: How many intermediate steps should be done
+    :param load_weights_path: Path to weights that should be loaded
+    :param save_weights: Whether to save the weights
+    :param save_weights_path: Path to save the weights
+    :param plot_loss: Whether to plot the loss
+    :param plot_yscale: y_scale (log/linear)
+    :return: Histories
+    """
+    histories = []
+
     # Load weights if path to weights is given
     if load_weights_path:
         encdecmodel.load_weights(load_weights_path)
@@ -172,6 +265,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
                                                                                                           ])
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
+            histories.append(history)
         except KeyboardInterrupt:
             print("Training interrupted!")
 
@@ -198,21 +292,37 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
                                                                                         epochs*intermediates))
 
     # Return the history of the training session
-    return history
+    return histories
 
 
-def predict(encoder, decoder, enc_input, dec_input, plot=True):
-    # Generate a random number to select a random batch
-    random_batch = np.random.randint(0, len(test_y_batches))
+def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, plot=True):
+    """
 
-    # Make a prediction in the testing set
-    predictions = make_prediction(encoder, decoder, enc_input[random_batch, :seq_len_in], dec_input[random_batch, 0:1],
+    :param encoder: Encoder model
+    :param decoder: Decoder model
+    :param enc_input: Input for the encoder
+    :param dec_input: Input for the decoder
+    :param actual_output: The actual output (during decoding time)
+    :param prev_output: The previous output (during encoding time)
+    :param plot: Boolean to indicate if the prediction should be plotted
+    :return: Made predictions.
+    """
+    # Make a prediction on the given data
+    predictions = make_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
                                   seq_len_out)
 
     if plot:
-        plt.plot(test_y_batches[random_batch], label="real")
-        plt.plot(predictions, label="predicted")
-        # plt.plot(np.arange(seq_len_in-1, seq_len_in+seq_len_out-1), x_dec[0])
+        # Concat the ys so we get a smooth line for the ys
+        ys = np.concatenate([prev_output, actual_output[0]])
+
+        # Plot them
+        plt.plot(range(0, seq_len_in + seq_len_out), ys, label="real")
+        plt.plot(range(seq_len_in, seq_len_in + seq_len_out), predictions, label="predicted")
+
+        # This code can be used if you want the ys to be mapped with 3 labels
+        # plt.plot(range(0, seq_len_in), prev_output, label="previous_real")
+        # plt.plot(range(seq_len_in, seq_len_in + seq_len_out), output[0], label="real")
+        # plt.plot(range(seq_len_in, seq_len_in + seq_len_out), predictions, label="predicted")
         plt.legend()
         plt.show()
 
@@ -220,16 +330,19 @@ def predict(encoder, decoder, enc_input, dec_input, plot=True):
 
 
 if __name__ == "__main__":
+    test_x_batches, test_y_batches = generate_validation_data()
+
     # Build the model
     encoder, decoder, encdecmodel = build_seq2seq_model(use_noise=False)
 
-    # train(encdecmodel=encdecmodel, steps_per_epoch=25, epochs=50, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path="l0.00075-ss128-i192-o96-e150-f83-seq2seq/l0.00075-ss128-tl0.427-vl0.490-i192-o96-e150-seq2seq.h5", intermediates=3)
-    #
-    encdecmodel.load_weights("l0.00075-ss128-tl0.383-vl0.559-i192-o96-e150-seq2seq.h5")
+    # train(encdecmodel=encdecmodel, steps_per_epoch=25, epochs=10, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=3)
 
-    predict(encoder, decoder, test_x_batches[0], test_x_batches[1])
+    encdecmodel.load_weights(filepath="l0.00075-ss32-tl0.490-vl0.483-i96-o96-e30-seq2seq.h5")
+
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+
+    predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 
 
 
-# print(generate_batches())
