@@ -14,32 +14,14 @@ input_feature_amount = 149
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 32
+state_size = 96
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
 seq_len_in = 96
 seq_len_out = 96
 
-# # Load in the prepared data
-# input_data = open("../data/prepared/input_data.pkl", "rb")
-# normalized_input_data, output_data = pickle.load(input_data)
-#
-# # Define the input and output of the testing set
-# test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
-#
-# # Change the length so we can generate batches from test_x and test_y
-# new_len = (seq_len_in + seq_len_out) * (test_x.shape[1] // (seq_len_in + seq_len_out))
-# test_x, test_y = test_x[:, :new_len], test_y[:, :new_len]
-#
-# # Make them batches
-# test_x_batches = np.reshape(test_x, (-1, (seq_len_in + seq_len_out), input_feature_amount))
-# test_y_batches = np.reshape(test_y, (-1, (seq_len_in + seq_len_out), output_feature_amount))
-#
-# # Set the batches
-# test_xe_batches = test_x_batches[:, :seq_len_in]
-# test_xd_batches = test_y_batches[:, seq_len_in-1:-1]
-# test_x_batches = [test_xe_batches, test_xd_batches]
-# test_y_batches = test_y_batches[:, seq_len_in:]
+input_data = open("../../data/prepared/input_data.pkl", "rb")
+normalized_input_data, output_data = pickle.load(input_data)
 
 
 def generate_validation_data():
@@ -47,10 +29,7 @@ def generate_validation_data():
     Generate validation data of the whole testing set.
     :return: the validation data
     """
-    input_data = open("../data/prepared/input_data.pkl", "rb")
-    normalized_input_data, output_data = pickle.load(input_data)
-
-    print(np.shape(normalized_input_data))
+    # print(np.shape(normalized_input_data))
 
     test_xe_batches = []
     test_xd_batches = []
@@ -87,8 +66,8 @@ def generate_batches():
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Read data
-    input_data = open("../data/prepared/input_data.pkl", "rb")
-    normalized_input_data, output_data = pickle.load(input_data)
+    # input_data = open("../data/prepared/input_data.pkl", "rb")
+    # normalized_input_data, output_data = pickle.load(input_data)
 
     while True:
         # Split into training and testing set
@@ -126,8 +105,8 @@ def generate_validation_sample():
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Read data
-    input_data = open("../data/prepared/input_data.pkl", "rb")
-    normalized_input_data, output_data = pickle.load(input_data)
+    # input_data = open("../data/prepared/input_data.pkl", "rb")
+    # normalized_input_data, output_data = pickle.load(input_data)
 
     # Split into training and testing set
     test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
@@ -169,13 +148,19 @@ def build_seq2seq_model(use_noise=False):
     x_enc = ks.Input(shape=(None, input_feature_amount), name="x_enc")
     x_dec = ks.Input(shape=(None, output_feature_amount), name="x_dec")
 
+    input_conv3 = ks.layers.Conv1D(filters=64, kernel_size=9, strides=4, activation='relu', input_shape=(seq_len_in, input_feature_amount))(x_enc)
+    input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=9, strides=1, activation='relu')(input_conv3)
+    input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=7, strides=4, activation='relu')(input_conv2)
+    input_conv = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu')(input_conv1)
+    # input_conv_pool = ks.layers.MaxPooling1D(pool_size=2)(input_conv)
+
     if use_noise:
         x_dec_t = ks.layers.GaussianNoise(0.2)(x_dec)
     else:
         x_dec_t = x_dec
 
     # Define the encoder GRU, which only has to return a state
-    _, state = ks.layers.GRU(state_size, return_state=True)(x_enc)
+    _, state = ks.layers.GRU(state_size, return_state=True)(input_conv)
 
     # Define the decoder GRU and the Dense layer that will transform sequences of size 20 vectors to
     # a sequence of 1-long vectors of final predicted values
@@ -335,10 +320,12 @@ if __name__ == "__main__":
     # Build the model
     encoder, decoder, encdecmodel = build_seq2seq_model(use_noise=False)
 
-    # train(encdecmodel=encdecmodel, steps_per_epoch=25, epochs=10, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=3)
+    encdecmodel.summary()
 
-    encdecmodel.load_weights(filepath="l0.00075-ss32-tl0.490-vl0.483-i96-o96-e30-seq2seq.h5")
+    train(encdecmodel=encdecmodel, steps_per_epoch=35, epochs=10, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=3)
+
+    # encdecmodel.load_weights(filepath="l0.00075-ss64-tl0.319-vl0.337-i96-o96-e30-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
