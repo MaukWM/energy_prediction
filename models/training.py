@@ -178,8 +178,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
             encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
                                                                                                           # ks.losses.mean_absolute_error
                                                                                                           ])
-            history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
-                                                validation_data=validation_data)
+            history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs)
             histories.append(history)
         except KeyboardInterrupt:
             print("Training interrupted!")
@@ -269,6 +268,11 @@ if __name__ == "__main__":
     # print(normalized_input_data.shape)
     # print(test_y_batches.shape)
     # print(np.array(test_x_batches).shape)
+
+    for a in generate_batches():
+        (xe, xd), y = a
+        print(xe.shape, xd.shape, y.shape)
+        break
 
     train(encdecmodel=encdecmodel, steps_per_epoch=35, epochs=10, validation_data=(test_x_batches, test_y_batches),
           learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=3)
