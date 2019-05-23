@@ -267,19 +267,14 @@ if __name__ == "__main__":
     # print(test_y_batches.shape)
     # print(np.array(test_x_batches).shape)
 
-    for a in generate_batches():
-        (xe, xd), y = a
-        print(xe.shape, xd.shape, y.shape)
-        break
-
     train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=100, validation_data=(test_x_batches, test_y_batches),
           learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=20)
 
     # encdecmodel.load_weights(filepath="l0.00065-ss156-tl0.285-vl0.997-i192-o96-e420-seq2seq.h5")
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    # predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
+    # predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 
 
 

@@ -9,7 +9,7 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     """
     # Define model inputs for the encoder/decoder stack
     x_enc = ks.Input(shape=(seq_len_in, input_feature_amount), name="x_enc")
-    x_dec = ks.Input(shape=(seq_len_in, output_feature_amount), name="x_dec")
+    x_dec = ks.Input(shape=(None, output_feature_amount), name="x_dec")
 
     input_conv3 = ks.layers.Conv1D(filters=128, kernel_size=9, strides=4, activation='relu')(x_enc)
     input_conv2 = ks.layers.Conv1D(filters=128, kernel_size=5, strides=1, activation='relu')(input_conv3)
@@ -53,6 +53,8 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     # Define the decoder/prediction model
     D = ks.Model(inputs=[x_dec, state_in], outputs=[dec_out, new_state])
     return E, D, encdecmodel
+
+
 
 
 
