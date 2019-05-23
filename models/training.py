@@ -25,7 +25,7 @@ output_feature_amount = 1
 state_size = 156
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96
+seq_len_in = 96 * 3
 seq_len_out = 96
 
 normalized_input_data, output_data = load_data()
@@ -43,7 +43,7 @@ def generate_validation_data():
     for i in range(len(normalized_input_data)):
         for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
-            if j % 21 == 0:
+            if j % 6 == 0:
                 test_xe_batches.append(normalized_input_data[i][j:j+seq_len_in])
                 test_xd_batches.append(output_data[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
                 test_y_batches.append(output_data[i][j + seq_len_in:j + seq_len_in + seq_len_out])
@@ -250,13 +250,6 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
 
 if __name__ == "__main__":
     test_x_batches, test_y_batches = generate_validation_data()
-
-    print(test_x_batches)
-    print("=============================\n"
-          "=============================\n"
-          "=============================")
-    print(test_y_batches)
-
     # # Build the model
     # encoder, decoder, encdecmodel = build_seq2seq_model(input_feature_amount=input_feature_amount,
     #                                                     output_feature_amount=output_feature_amount,
@@ -279,8 +272,8 @@ if __name__ == "__main__":
         print(xe.shape, xd.shape, y.shape)
         break
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=35, epochs=10, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=3)
+    train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=100, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=20)
 
     # encdecmodel.load_weights(filepath="l0.00065-ss156-tl0.285-vl0.997-i192-o96-e420-seq2seq.h5")
 
