@@ -1,4 +1,8 @@
 # https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
+import sys
+import os
+sys.path.append(os.getcwd())
+
 import pickle
 import numpy as np
 import keras as ks
