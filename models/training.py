@@ -5,6 +5,7 @@ import keras as ks
 import matplotlib.pyplot as plt
 from models import metrics
 
+from utils import load_data
 from models.seq2seq.seq2seq import build_seq2seq_model
 from models.seq2seq_1dconv.seq2seq_1dconv import build_seq2seq_1dconv_model
 
@@ -23,7 +24,7 @@ state_size = 156
 seq_len_in = 96
 seq_len_out = 96
 
-input_data = open("../data/prepared/input_data.pkl", "rb")
+input_data = load_data()
 normalized_input_data, output_data = pickle.load(input_data)
 
 
@@ -83,9 +84,6 @@ def generate_batches():
         batch_xe = np.stack(batch_xe)
         batch_xd = np.stack(batch_xd)
         batch_y = np.stack(batch_y)
-        print(batch_xe.shape)
-        print(batch_xd.shape)
-        print(batch_y.shape)
         yield [batch_xe, batch_xd], batch_y
 
 
