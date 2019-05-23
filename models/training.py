@@ -24,8 +24,7 @@ state_size = 156
 seq_len_in = 96
 seq_len_out = 96
 
-input_data = load_data()
-normalized_input_data, output_data = pickle.load(input_data)
+normalized_input_data, output_data = load_data()
 
 
 def generate_validation_data():
