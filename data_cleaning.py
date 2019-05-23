@@ -145,10 +145,10 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
 #
 # analyse_building_energy_data()
 # analyse_building_energy_data("data/cleaned/building_energy/")
-
-# print_difference_between_missing_data("data/weather1415.csv", 3600, "localhour")
-# print(calculate_percentage_missing_data("data/weather1415.csv", 3600, "localhour"))
-
+#
+# print_difference_between_missing_data("data/cleaned/weather/tc-weather1415.csv", 3600/4, "local_15min")
+# print(calculate_percentage_missing_data("data/cleaned/weather/tc-weather1415.csv", 3600/4, "local_15min"))
+#
 # df = pd.read_csv("data/cleaned/building_energy/tc-114-building_data-2014.csv")
 # print(df.head(5))
 

@@ -103,7 +103,6 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     clean_and_prepare_weather_data(weather_df)
     weather_df = pd.read_csv("data/cleaned/weather/tc-weather1415.csv")
 
-    # print("START", energy_df.iloc[68388, :])
     # Rename column with time so we can merge the two dataframes (warning: ugly code)
     weather_df = weather_df.rename(columns={"localhour": "local_15min"})
     weather_df['local_15min'] = pd.to_datetime(weather_df['local_15min'])
@@ -116,23 +115,17 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     # Set the indexes so we know what to merge on
     energy_df = energy_df.set_index('local_15min')
     weather_df = weather_df.set_index('local_15min')
-    # print("AFTER DATE INDEXING ENERGY", energy_df.iloc[68388, :], energy_df)
-    # print("AFTER DATE INDEXING WEATHER", weather_df.iloc[68388, :])
 
     # Merge the two dataframe, followed by all my other failed attempts
     merged_df = pd.concat([energy_df, weather_df], axis=1)
-    # print("AFTER CONCAT", merged_df.iloc[68388, :])
 
-    # print("AFTER CONCAT", energy_df.iloc[68388, :])
     # Change datetime to month and day of the week
     merged_df['month'] = merged_df.index.month
     merged_df['weekday'] = merged_df.index.weekday
 
-    # print("AFTER SETTING MONTH AND WEEKDAY", merged_df.iloc[68388, :])
     # Drop local_15min as we don't need it anymore
     merged_df = merged_df.reset_index()
     merged_df = merged_df.drop(columns=['local_15min'])
-    # print("AFTER DROP LOCAL15", merged_df.iloc[68388, :])
 
     # weather_df['local_15min'] = weather_df['local_15min'].dt.strftime("%Y-%m-%d %H:%M:%S")
     # merged_df = pd.concat([energy_df, weather_df], join='inner', axis=1)
@@ -190,7 +183,6 @@ def normalize_data(path_to_data):
             # If for some reason any data is still NaN, set it to 0.
             if np.isnan(data).any():
                 print("WARNING:", filename, "contains NaN values in " + str(len(np.argwhere(np.isnan(data)))) + " cells")
-                # print(np.argwhere(np.isnan(data)))
                 data[np.isnan(data)] = 0
             collected_data.append(data)
     print("============================")
@@ -206,7 +198,6 @@ def normalize_data(path_to_data):
         if stacked_collected_data_std[i] == 0:
             stacked_collected_data_std[i] = 1
             stacked_collected_data_mean[i] = 0
-    # print(np.shape(stacked_collected_data))
 
     # Calculate the normalized data
     return (collected_data - stacked_collected_data_mean) / stacked_collected_data_std, np.take(collected_data, indices=column_data_to_predict, axis=2)
@@ -229,10 +220,9 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pi
 
 
 def the_whole_shibang():
-    data_cleaning.time_clean_building_energy()
-    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata.csv", "data/weather1415.csv", "data/prepared/")
+    # data_cleaning.time_clean_building_energy()
+    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered_no_energy_indicator.csv", "data/weather1415.csv", "data/prepared/")
     normalize_and_pickle_prepared_data()
-
 
 
 # prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered.csv", "data/weather1415.csv", "data/prepared")
