@@ -1,13 +1,14 @@
 # https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
-import sys
-import os
-sys.path.append(os.getcwd())
+# import sys
+# import os
+# sys.path.append(os.getcwd())
 
 import pickle
 import numpy as np
 import keras as ks
 import matplotlib.pyplot as plt
-from models import metrics
+import metrics
+from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_model
 
 from utils import load_data
 from models.seq2seq.seq2seq import build_seq2seq_model
@@ -43,7 +44,7 @@ def generate_validation_data():
     for i in range(len(normalized_input_data)):
         for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
-            if j % 6 == 0:
+            if j % 31 == 0:
                 test_xe_batches.append(normalized_input_data[i][j:j+seq_len_in])
                 test_xd_batches.append(output_data[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
                 test_y_batches.append(output_data[i][j + seq_len_in:j + seq_len_in + seq_len_out])
@@ -255,11 +256,17 @@ if __name__ == "__main__":
     #                                                     output_feature_amount=output_feature_amount,
     #                                                     state_size=state_size, use_noise=False)
 
+    # # Build the model
+    # encoder, decoder, encdecmodel = build_seq2seq_1dconv_model(input_feature_amount=input_feature_amount,
+    #                                                            output_feature_amount=output_feature_amount,
+    #                                                            state_size=state_size, seq_len_in=seq_len_in,
+    #                                                            use_noise=False)
+
     # Build the model
-    encoder, decoder, encdecmodel = build_seq2seq_1dconv_model(input_feature_amount=input_feature_amount,
-                                                               output_feature_amount=output_feature_amount,
-                                                               state_size=state_size, seq_len_in=seq_len_in,
-                                                               use_noise=False)
+    encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
+                                                                  output_feature_amount=output_feature_amount,
+                                                                  state_size=state_size, seq_len_in=seq_len_in,
+                                                                  seq_len_out=seq_len_out)
 
     encdecmodel.summary()
 
@@ -267,14 +274,14 @@ if __name__ == "__main__":
     # print(test_y_batches.shape)
     # print(np.array(test_x_batches).shape)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=100, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=20)
+    train(encdecmodel=encdecmodel, steps_per_epoch=20, epochs=5, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=1)
 
     # encdecmodel.load_weights(filepath="l0.00065-ss156-tl0.285-vl0.997-i192-o96-e420-seq2seq.h5")
 
-    # predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    # predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
+    predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 
 
 
