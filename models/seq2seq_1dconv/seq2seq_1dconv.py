@@ -2,7 +2,7 @@
 import keras as ks
 
 
-def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, state_size, seq_len_in, use_noise=False):
+def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, state_size, seq_len_in):
     """
     Function to build the seq2seq model used.
     :return: Encoder model, decoder model (used for predicting) and full model (used for training).
@@ -11,16 +11,11 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     x_enc = ks.Input(shape=(seq_len_in, input_feature_amount), name="x_enc")
     x_dec = ks.Input(shape=(None, output_feature_amount), name="x_dec")
 
-    input_conv3 = ks.layers.Conv1D(filters=128, kernel_size=9, strides=4, activation='relu')(x_enc)
-    input_conv2 = ks.layers.Conv1D(filters=128, kernel_size=5, strides=1, activation='relu')(input_conv3)
-    input_conv1 = ks.layers.Conv1D(filters=128, kernel_size=3, strides=2, activation='relu')(input_conv2)
-    input_conv = ks.layers.Conv1D(filters=128, kernel_size=3, strides=2, activation='relu')(input_conv1)
-    # input_conv_pool = ks.layers.MaxPooling1D(pool_size=2)(input_conv)
-
-    if use_noise:
-        x_dec_t = ks.layers.GaussianNoise(0.2)(x_dec)
-    else:
-        x_dec_t = x_dec
+    input_conv4 = ks.layers.Conv1D(filters=256, kernel_size=9, strides=4, activation='relu')(x_enc)
+    input_conv3 = ks.layers.Conv1D(filters=256, kernel_size=5, strides=1, activation='relu')(input_conv4)
+    input_conv2 = ks.layers.Conv1D(filters=256, kernel_size=5, strides=2, activation='relu')(input_conv3)
+    input_conv1 = ks.layers.Conv1D(filters=256, kernel_size=3, strides=1, activation='relu')(input_conv2)
+    input_conv = ks.layers.Conv1D(filters=256, kernel_size=3, strides=2, activation='relu')(input_conv1)
 
     # Define the encoder GRU, which only has to return a state
     _, state = ks.layers.GRU(state_size, return_state=True)(input_conv)
@@ -32,7 +27,7 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     dec_dense = ks.layers.TimeDistributed(ks.layers.Dense(output_feature_amount, activation='linear'))
 
     # Use these definitions to calculate the outputs of out encoder/decoder stack
-    dec_intermediates, _ = dec_gru(x_dec_t, initial_state=state)
+    dec_intermediates, _ = dec_gru(x_dec, initial_state=state)
     # dec_intermediates = dec_dense2(dec_intermediates)
     dec_outs = dec_dense(dec_intermediates)
 

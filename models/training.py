@@ -23,10 +23,10 @@ input_feature_amount = 83  # 83 without static indicators, 150 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 156
+state_size = 256
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 3
+seq_len_in = 96 * 5
 seq_len_out = 96
 
 normalized_input_data, output_data = load_data()
@@ -44,7 +44,7 @@ def generate_validation_data():
     for i in range(len(normalized_input_data)):
         for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
-            if j % 31 == 0:
+            if j % 4233 == 0:
                 test_xe_batches.append(normalized_input_data[i][j:j+seq_len_in])
                 test_xd_batches.append(output_data[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
                 test_y_batches.append(output_data[i][j + seq_len_in:j + seq_len_in + seq_len_out])
@@ -257,16 +257,15 @@ if __name__ == "__main__":
     #                                                     state_size=state_size, use_noise=False)
 
     # # Build the model
-    # encoder, decoder, encdecmodel = build_seq2seq_1dconv_model(input_feature_amount=input_feature_amount,
-    #                                                            output_feature_amount=output_feature_amount,
-    #                                                            state_size=state_size, seq_len_in=seq_len_in,
-    #                                                            use_noise=False)
+    encoder, decoder, encdecmodel = build_seq2seq_1dconv_model(input_feature_amount=input_feature_amount,
+                                                               output_feature_amount=output_feature_amount,
+                                                               state_size=state_size, seq_len_in=seq_len_in)
 
     # Build the model
-    encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
-                                                                  output_feature_amount=output_feature_amount,
-                                                                  state_size=state_size, seq_len_in=seq_len_in,
-                                                                  seq_len_out=seq_len_out)
+    # encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
+    #                                                               output_feature_amount=output_feature_amount,
+    #                                                               state_size=state_size, seq_len_in=seq_len_in,
+    #                                                               seq_len_out=seq_len_out)
 
     encdecmodel.summary()
 
@@ -274,10 +273,10 @@ if __name__ == "__main__":
     # print(test_y_batches.shape)
     # print(np.array(test_x_batches).shape)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=20, epochs=5, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=1)
+    train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=30, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=20)
 
-    # encdecmodel.load_weights(filepath="l0.00065-ss156-tl0.285-vl0.997-i192-o96-e420-seq2seq.h5")
+    # encdecmodel.load_weights(filepath="l0.00075-ss156-tl0.131-vl0.443-i288-o96-e2000-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 

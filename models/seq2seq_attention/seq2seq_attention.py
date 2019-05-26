@@ -1,7 +1,7 @@
 # https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
 import keras as ks
 from layers.attention import AttentionLayer
-from keras_self_attention import SeqSelfAttention
+# from keras_self_attention import SeqSelfAttention
 
 
 def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, state_size, seq_len_in, seq_len_out):
@@ -36,7 +36,7 @@ def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, s
     decoder_concat_input = ks.layers.Concatenate(axis=-1, name='concat_layer')([dec_intermediates, attn_out])
 
     # Define the softmax layer
-    dense = ks.layers.Dense(state_size, activation='softmax', name='softmax_layer')
+    dense = ks.layers.Dense(output_feature_amount, activation='softmax', name='softmax_layer')
     dense_time = ks.layers.TimeDistributed(dense, name='time_distributed_layer')
     decoder_pred = dense_time(decoder_concat_input)
 
@@ -60,7 +60,7 @@ def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, s
     decoder_model = ks.Model(inputs=[encoder_inf_states, decoder_init_state, decoder_inf_inputs],
                              outputs=[decoder_inf_pred, attn_inf_states, decoder_inf_state])
 
-    return encdecmodel, encoder_model, decoder_model
+    return encoder_model, decoder_model, encdecmodel
 
     # # Define the encoder model
     # E = ks.Model(inputs=x_enc, outputs=encoder_state)
