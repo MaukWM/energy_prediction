@@ -7,7 +7,12 @@ import pickle
 import numpy as np
 import keras as ks
 import matplotlib.pyplot as plt
+from keras.utils import print_summary
+
 import metrics
+from tensorflow.python.keras.optimizers import Adam
+
+from models.seq2seq_1dconv_attention.seq2seq_1dconv_attention import build_seq2seq_1dconv_attention_model
 from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_model
 
 from utils import load_data
@@ -23,10 +28,10 @@ input_feature_amount = 83  # 83 without static indicators, 150 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 156
+state_size = 196
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 3
+seq_len_in = 96 * 5
 seq_len_out = 96
 
 normalized_input_data, output_data = load_data()
@@ -44,7 +49,7 @@ def generate_validation_data():
     for i in range(len(normalized_input_data)):
         for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
-            if j % 31 == 0:
+            if j % 1500 == 0:
                 test_xe_batches.append(normalized_input_data[i][j:j+seq_len_in])
                 test_xd_batches.append(output_data[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
                 test_y_batches.append(output_data[i][j + seq_len_in:j + seq_len_in + seq_len_out])
@@ -89,6 +94,41 @@ def generate_batches():
         batch_xd = np.stack(batch_xd)
         batch_y = np.stack(batch_y)
         yield [batch_xe, batch_xd], batch_y
+
+
+def generate_batches_return():
+    """
+    Generate batch to be used in training
+    :return: Batch for encoder and decoder inputs and a batch for output
+    """
+    while True:
+        # Split into training and testing set
+        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//2], output_data[:, :output_data.shape[1]//2]
+
+        # Batch input for encoder
+        batch_xe = []
+        # Batch input for decoder for guided training
+        batch_xd = []
+        # Batch output
+        batch_y = []
+
+        for i in range(batch_size):
+            # Select a random building from the training set
+            bd = np.random.randint(0, buildings)
+
+            # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
+            sp = np.random.randint(0, len(train_x[bd]) - seq_len_in - seq_len_out)
+
+            # Append samples to batches
+            batch_xe.append(train_x[bd][sp:sp+seq_len_in])
+            batch_xd.append(train_y[bd][sp+seq_len_in-1:sp+seq_len_in+seq_len_out-1])
+            batch_y.append(train_y[bd][sp+seq_len_in:sp+seq_len_in+seq_len_out])
+
+        # Stack batches and yield them
+        batch_xe = np.stack(batch_xe)
+        batch_xd = np.stack(batch_xd)
+        batch_y = np.stack(batch_y)
+        return [batch_xe, batch_xd], batch_y
 
 
 def generate_validation_sample():
@@ -139,15 +179,16 @@ def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
     """
     # Get the state from the Encoder using the previous timesteps for x
     # Expand the previous timesteps, we must make the input a batch (going from shape (100, 149) to (1, 100, 149))
-    state = E.predict(np.expand_dims(previous_timesteps_x, axis=0))
+    enc_outs, enc_last_state = E.predict(np.expand_dims(previous_timesteps_x, axis=0))
+    dec_state = enc_last_state
 
     # Initialize the outputs on the previous y so we have something to feed the net
     # It might be neater to feed a start symbol instead
-    outp = np.expand_dims(previous_y, axis=0)
+    dec_out = np.expand_dims(previous_y, axis=0)
     outputs = []
     for i in range(n_output_timesteps):
-        outp, state = D.predict([outp, state])
-        outputs.append(outp)
+        dec_out, attention, dec_state = D.predict([enc_outs, dec_state, dec_out])
+        outputs.append(dec_out)
 
     # Concatenate the outputs, as they are batches
     # For example, going from a list of (1,1,1) to one unit of (1,100,1)
@@ -180,7 +221,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     for i in range(intermediates):
         try:
-            encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
+            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
                                                                                                           # ks.losses.mean_absolute_error
                                                                                                           ])
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
@@ -262,22 +303,28 @@ if __name__ == "__main__":
     #                                                            state_size=state_size, seq_len_in=seq_len_in,
     #                                                            use_noise=False)
 
-    # Build the model
-    encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
-                                                                  output_feature_amount=output_feature_amount,
-                                                                  state_size=state_size, seq_len_in=seq_len_in,
-                                                                  seq_len_out=seq_len_out)
+    # # Build the model
+    # encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
+    #                                                               output_feature_amount=output_feature_amount,
+    #                                                               state_size=state_size, seq_len_in=seq_len_in,
+    #                                                               seq_len_out=seq_len_out)
 
-    encdecmodel.summary()
+    # Build the model
+    encoder, decoder, encdecmodel = build_seq2seq_1dconv_attention_model(input_feature_amount=input_feature_amount,
+                                                                         output_feature_amount=output_feature_amount,
+                                                                         state_size=state_size, seq_len_in=seq_len_in,
+                                                                         seq_len_out=seq_len_out)
+
+    print_summary(encdecmodel, line_length=150)
 
     # print(normalized_input_data.shape)
     # print(test_y_batches.shape)
     # print(np.array(test_x_batches).shape)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=20, epochs=5, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=1)
+    train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=100)
 
-    # encdecmodel.load_weights(filepath="l0.00065-ss156-tl0.285-vl0.997-i192-o96-e420-seq2seq.h5")
+    encdecmodel.load_weights(filepath="l0.00075-ss196-tl0.571-vl0.542-i96-o96-e500-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
