@@ -4,9 +4,12 @@
 # sys.path.append(os.getcwd())
 
 import pickle
+
+import math
 import numpy as np
 import keras as ks
 import matplotlib.pyplot as plt
+from keras.losses import mean_absolute_percentage_error
 from keras.utils import print_summary
 
 import metrics
@@ -21,7 +24,7 @@ from models.seq2seq_1dconv.seq2seq_1dconv import build_seq2seq_1dconv_model
 
 # Define some variables for generating batches
 buildings = 15
-batch_size = 512
+batch_size = 32
 
 # Define the amount of features in the input and the output
 input_feature_amount = 83  # 83 without static indicators, 150 with.
@@ -34,7 +37,7 @@ state_size = 256
 seq_len_in = 96 * 5
 seq_len_out = 96
 
-plot_last_time_steps_view = 92 * 2
+plot_last_time_steps_view = 96 * 2
 
 normalized_input_data, output_data = load_data()
 
@@ -169,6 +172,42 @@ def generate_validation_sample():
     return [batch_xe, batch_xd], batch_y, batch_y_prev
 
 
+def generate_testing_sample():
+    """
+    Generate batch to be used for validation, also return the previous ys so we can plot the input as well
+    :return: Batch for encoder and decoder inputs and a batch for output
+    """
+    # Split into training and testing set
+    test_x, test_y = normalized_input_data[:, :normalized_input_data.shape[1]//2], output_data[:, :output_data.shape[1]//2]
+
+    # Batch input for encoder
+    batch_xe = []
+    # Batch input for decoder for guided training
+    batch_xd = []
+    # Batch output
+    batch_y = []
+
+    # Select a random building from the training set
+    bd = np.random.randint(0, len(test_x))
+
+    # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
+    sp = np.random.randint(0, len(test_x[bd]) - seq_len_in - seq_len_out)
+
+    # Append sample to batch
+    batch_xe.append(test_x[bd][sp:sp + seq_len_in])
+    batch_xd.append(test_y[bd][sp + seq_len_in - 1:sp + seq_len_in + seq_len_out - 1])
+    batch_y.append(test_y[bd][sp + seq_len_in:sp + seq_len_in + seq_len_out])
+
+    # Output during input frames
+    batch_y_prev = test_y[bd][sp:sp + seq_len_in]
+
+    # Stack batches and return them
+    batch_xe = np.stack(batch_xe)
+    batch_xd = np.stack(batch_xd)
+    batch_y = np.stack(batch_y)
+    return [batch_xe, batch_xd], batch_y, batch_y_prev
+
+
 def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
     """
     Function to make a prediction from previous timesteps
@@ -251,9 +290,10 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     for i in range(intermediates):
         try:
-            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
-                                                                                                          # ks.losses.mean_absolute_error
-                                                                                                          ])
+            encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
+                                                                                            mean_absolute_percentage_error
+                                                                                            # ks.losses.mean_absolute_error
+                                                                                            ])
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)
@@ -320,6 +360,32 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     return predictions
 
 
+def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
+    encdecmodel.compile(ks.optimizers.Adam(1), metrics.root_mean_squared_error)
+
+    eval_loss = encdecmodel.evaluate(predict_x_batches, predict_y_batches,
+                                     batch_size=1, verbose=1)
+
+    predictions = predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev, plot=False)
+
+    real = predict_y_batches[0]
+
+    real_mean = np.mean(real)
+
+    rrse_upper = np.sum(np.square(np.subtract(predictions, real)))
+    rrse_lower = np.sum(np.square(np.subtract(np.full(predictions.size, real_mean), real)))
+    rrse = rrse_upper / rrse_lower
+
+    nrmsem = eval_loss / (np.amax(real) - np.amin(real))
+    nrmsea = eval_loss / real_mean
+
+    print("Loss: {}".format(eval_loss))
+    print("Real mean: {}".format(real_mean))
+    print("RRSE: {}%".format(rrse * 100))
+    print("NRMSEM: {}%".format(nrmsem * 100))
+    print("NRMSEA: {}%".format(nrmsea * 100))
+
+
 if __name__ == "__main__":
     test_x_batches, test_y_batches = generate_validation_data()
     # # Build the model
@@ -351,11 +417,13 @@ if __name__ == "__main__":
     # print(np.array(test_x_batches).shape)
 
     # train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=100)
+    #       learning_rate=0.00025, plot_yscale='linear', load_weights_path="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5", intermediates=100)
 
-    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+
+    calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 
     predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 
