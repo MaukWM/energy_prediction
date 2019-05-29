@@ -28,11 +28,13 @@ input_feature_amount = 83  # 83 without static indicators, 150 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 196
+state_size = 256
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
 seq_len_in = 96 * 5
 seq_len_out = 96
+
+plot_last_time_steps_view = 92 * 2
 
 normalized_input_data, output_data = load_data()
 
@@ -179,6 +181,34 @@ def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
     """
     # Get the state from the Encoder using the previous timesteps for x
     # Expand the previous timesteps, we must make the input a batch (going from shape (100, 149) to (1, 100, 149))
+    state = E.predict(np.expand_dims(previous_timesteps_x, axis=0))
+
+    # Initialize the outputs on the previous y so we have something to feed the net
+    # It might be neater to feed a start symbol instead
+    outp = np.expand_dims(previous_y, axis=0)
+    outputs = []
+    for i in range(n_output_timesteps):
+        outp, state = D.predict([outp, state])
+        outputs.append(outp)
+
+    # Concatenate the outputs, as they are batches
+    # For example, going from a list of (1,1,1) to one unit of (1,100,1)
+    # So we take the 0th element from the batch which are our outputs
+    return np.concatenate(outputs, axis=1)[0]
+
+
+def make_attention_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
+    """
+    Function to make a prediction from previous timesteps
+    :param E: The encoder model
+    :param D: The decoder model
+    :param previous_timesteps_x: The previous timesteps x values
+    :param previous_y: The last y of the input timesteps
+    :param n_output_timesteps: The amount of output timesteps
+    :return: An array with the predicted values
+    """
+    # Get the state from the Encoder using the previous timesteps for x
+    # Expand the previous timesteps, we must make the input a batch (going from shape (100, 149) to (1, 100, 149))
     enc_outs, enc_last_state = E.predict(np.expand_dims(previous_timesteps_x, axis=0))
     dec_state = enc_last_state
 
@@ -274,11 +304,11 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
 
     if plot:
         # Concat the ys so we get a smooth line for the ys
-        ys = np.concatenate([prev_output, actual_output[0]])
+        ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
 
         # Plot them
-        plt.plot(range(0, seq_len_in + seq_len_out), ys, label="real")
-        plt.plot(range(seq_len_in, seq_len_in + seq_len_out), predictions, label="predicted")
+        plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
+        plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
 
         # This code can be used if you want the ys to be mapped with 3 labels
         # plt.plot(range(0, seq_len_in), prev_output, label="previous_real")
@@ -297,11 +327,10 @@ if __name__ == "__main__":
     #                                                     output_feature_amount=output_feature_amount,
     #                                                     state_size=state_size, use_noise=False)
 
-    # # Build the model
-    # encoder, decoder, encdecmodel = build_seq2seq_1dconv_model(input_feature_amount=input_feature_amount,
-    #                                                            output_feature_amount=output_feature_amount,
-    #                                                            state_size=state_size, seq_len_in=seq_len_in,
-    #                                                            use_noise=False)
+    # Build the model
+    encoder, decoder, encdecmodel = build_seq2seq_1dconv_model(input_feature_amount=input_feature_amount,
+                                                               output_feature_amount=output_feature_amount,
+                                                               state_size=state_size, seq_len_in=seq_len_in)
 
     # # Build the model
     # encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
@@ -309,11 +338,11 @@ if __name__ == "__main__":
     #                                                               state_size=state_size, seq_len_in=seq_len_in,
     #                                                               seq_len_out=seq_len_out)
 
-    # Build the model
-    encoder, decoder, encdecmodel = build_seq2seq_1dconv_attention_model(input_feature_amount=input_feature_amount,
-                                                                         output_feature_amount=output_feature_amount,
-                                                                         state_size=state_size, seq_len_in=seq_len_in,
-                                                                         seq_len_out=seq_len_out)
+    # # Build the model
+    # encoder, decoder, encdecmodel = build_seq2seq_1dconv_attention_model(input_feature_amount=input_feature_amount,
+    #                                                                      output_feature_amount=output_feature_amount,
+    #                                                                      state_size=state_size, seq_len_in=seq_len_in,
+    #                                                                      seq_len_out=seq_len_out)
 
     print_summary(encdecmodel, line_length=150)
 
@@ -321,10 +350,10 @@ if __name__ == "__main__":
     # print(test_y_batches.shape)
     # print(np.array(test_x_batches).shape)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=100)
+    # train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=100)
 
-    encdecmodel.load_weights(filepath="l0.00075-ss196-tl0.571-vl0.542-i96-o96-e500-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
