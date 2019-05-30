@@ -1,8 +1,7 @@
-# https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
 import keras as ks
 
 
-def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size, use_noise=False):
+def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size):
     """
     Function to build the seq2seq model used.
     :return: Encoder model, decoder model (used for predicting) and full model (used for training).
@@ -10,14 +9,6 @@ def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size,
     # Define model inputs for the encoder/decoder stack
     x_enc = ks.Input(shape=(None, input_feature_amount), name="x_enc")
     x_dec = ks.Input(shape=(None, output_feature_amount), name="x_dec")
-
-    # input_conv = ks.layers.Conv1D(filters=32, kernel_size=8, strides=4, activation='relu', input_shape=(seq_len_in, input_feature_amount))(x_enc)
-    # input_conv_pool = ks.layers.MaxPooling1D(pool_size=2)(input_conv)
-
-    if use_noise:
-        x_dec_t = ks.layers.GaussianNoise(0.2)(x_dec)
-    else:
-        x_dec_t = x_dec
 
     # Define the encoder GRU, which only has to return a state
     _, state = ks.layers.GRU(state_size, return_state=True)(x_enc)  # (input_conv)
@@ -29,7 +20,7 @@ def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size,
     dec_dense = ks.layers.TimeDistributed(ks.layers.Dense(output_feature_amount, activation='linear'))
 
     # Use these definitions to calculate the outputs of out encoder/decoder stack
-    dec_intermediates, _ = dec_gru(x_dec_t, initial_state=state)
+    dec_intermediates, _ = dec_gru(x_dec, initial_state=state)
     # dec_intermediates = dec_dense2(dec_intermediates)
     dec_outs = dec_dense(dec_intermediates)
 
@@ -50,9 +41,3 @@ def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size,
     # Define the decoder/prediction model
     D = ks.Model(inputs=[x_dec, state_in], outputs=[dec_out, new_state])
     return E, D, encdecmodel
-
-
-
-
-
-

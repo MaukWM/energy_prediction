@@ -1,5 +1,3 @@
-# https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
-# import keras as ks
 from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, Conv1D
 from tensorflow.python.keras.models import Model
 
@@ -15,10 +13,11 @@ def build_seq2seq_1dconv_attention_model(input_feature_amount, output_feature_am
     x_enc = Input(shape=(seq_len_in, input_feature_amount), name="x_enc")
     x_dec = Input(shape=(seq_len_out, output_feature_amount), name="x_dec")
 
-    input_conv3 = Conv1D(filters=128, kernel_size=9, strides=4, activation='relu')(x_enc)
-    input_conv2 = Conv1D(filters=128, kernel_size=5, strides=1, activation='relu')(input_conv3)
-    input_conv1 = Conv1D(filters=128, kernel_size=3, strides=2, activation='relu')(input_conv2)
-    input_conv = Conv1D(filters=128, kernel_size=3, strides=2, activation='relu')(input_conv1)
+    input_conv4 = Conv1D(filters=46, kernel_size=7, strides=2, activation='relu')(x_enc)
+    input_conv3 = Conv1D(filters=46, kernel_size=5, strides=1, activation='relu')(input_conv4)
+    input_conv2 = Conv1D(filters=46, kernel_size=5, strides=2, activation='relu')(input_conv3)
+    input_conv1 = Conv1D(filters=46, kernel_size=3, strides=1, activation='relu')(input_conv2)
+    input_conv = Conv1D(filters=46, kernel_size=3, strides=2, activation='relu')(input_conv1)
 
     # Define the encoder GRU, which only has to return a state
     encoder_gru = GRU(state_size, return_sequences=True, return_state=True, name="encoder_gru")
@@ -48,10 +47,11 @@ def build_seq2seq_1dconv_attention_model(input_feature_amount, output_feature_am
     # Define the separate encoder model for inferencing
     encoder_inf_inputs = Input(shape=(seq_len_in, input_feature_amount), name="encoder_inf_inputs")
 
-    input_conv3 = Conv1D(filters=128, kernel_size=9, strides=4, activation='relu')(encoder_inf_inputs)
-    input_conv2 = Conv1D(filters=128, kernel_size=5, strides=1, activation='relu')(input_conv3)
-    input_conv1 = Conv1D(filters=128, kernel_size=3, strides=2, activation='relu')(input_conv2)
-    input_conv = Conv1D(filters=128, kernel_size=3, strides=2, activation='relu')(input_conv1)
+    input_conv4 = Conv1D(filters=46, kernel_size=7, strides=2, activation='relu')(encoder_inf_inputs)
+    input_conv3 = Conv1D(filters=46, kernel_size=5, strides=1, activation='relu')(input_conv4)
+    input_conv2 = Conv1D(filters=46, kernel_size=5, strides=2, activation='relu')(input_conv3)
+    input_conv1 = Conv1D(filters=46, kernel_size=3, strides=1, activation='relu')(input_conv2)
+    input_conv = Conv1D(filters=46, kernel_size=3, strides=2, activation='relu')(input_conv1)
 
     encoder_inf_out, encoder_inf_state = encoder_gru(input_conv)
     encoder_model = Model(inputs=encoder_inf_inputs, outputs=[encoder_inf_out, encoder_inf_state])
