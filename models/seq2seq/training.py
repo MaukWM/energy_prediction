@@ -103,7 +103,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
                 encdecmodel.save_weights(save_weights_path)
             else:
                 # Save weights with amount of epochs trained, loss and validation loss.
-                encdecmodel.save_weights("l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-e{6}-seq2seq.h5".format(str(learning_rate),
+                encdecmodel.save_weights("s2s-l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-e{6}-seq2seq.h5".format(str(learning_rate),
                                                                                         str(state_size),
                                                                                         history.history['loss'][-1],
                                                                                         history.history['val_loss'][-1],
