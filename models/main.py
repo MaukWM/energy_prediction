@@ -3,13 +3,21 @@ import numpy as np
 
 from utils import load_data
 
-# Define some variables for generating batches
 buildings = 15
 batch_size = 256
+
+# Define the amount of features in the input and the output
+input_feature_amount = 83  # 83 without static indicators, 150 with.
+output_feature_amount = 1
+
+# Define size of states used by GRU
+state_size = 96
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
 seq_len_in = 96 * 2
 seq_len_out = 96
+
+plot_last_time_steps_view = 96 * 2
 
 normalized_input_data, output_data = load_data()
 

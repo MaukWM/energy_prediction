@@ -4,26 +4,27 @@ import matplotlib.pyplot as plt
 from keras.losses import mean_absolute_percentage_error
 
 import metrics
-from models.main import generate_batches, generate_validation_data
+from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
+    state_size, input_feature_amount, output_feature_amount
 
 # Define some variables for generating batches
 from models.seq2seq_1dconv.seq2seq_1dconv import build_seq2seq_1dconv_model
 
-buildings = 15
-batch_size = 256
-
-# Define the amount of features in the input and the output
-input_feature_amount = 83  # 83 without static indicators, 150 with.
-output_feature_amount = 1
-
-# Define size of states used by GRU
-state_size = 96
-
-# Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 2
-seq_len_out = 96
-
-plot_last_time_steps_view = 96 * 2
+# buildings = 15
+# batch_size = 256
+#
+# # Define the amount of features in the input and the output
+# input_feature_amount = 83  # 83 without static indicators, 150 with.
+# output_feature_amount = 1
+#
+# # Define size of states used by GRU
+# state_size = 96
+#
+# # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
+# seq_len_in = 96 * 2
+# seq_len_out = 96
+#
+# plot_last_time_steps_view = 96 * 2
 
 
 def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
