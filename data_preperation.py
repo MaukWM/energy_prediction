@@ -4,14 +4,17 @@ import numpy as np
 import pandas as pd
 import pickle
 import data_cleaning
+from datetime import datetime
 
-# Set some display options to make viewing df.head() more easy.
+# Set some display options to make viewing df.head() show more.
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', 500000)
 pd.set_option('display.width', 10000000)
 
 DATA_LENGTH = 69986
 column_data_to_predict = [0]  # 0 is use column, 28 is grid column
+
+weather_columns = ['localhour', 'temperature', 'dew_point', 'humidity', 'visibility', 'apparent_temperature', 'pressure', 'wind_speed', 'cloud_cover', 'precip_intensity', 'precip_probability']
 
 
 def clean_and_prep_metadata(meta_df, building_id):
@@ -31,23 +34,41 @@ def clean_and_prep_metadata(meta_df, building_id):
     return meta_df
 
 
-def merge_energy_data_with_metadata(path_to_energy_data, path_to_metadata):
+def merge_energy_data_with_metadata(path_to_metadata=None, path_to_energy_data=None, meta_df=None, cleaned_df=None):
     """
     Function to merge the changing energy data with the static metadata
     :param path_to_energy_data: Path to file containing energy data for a single building
     :param path_to_metadata: Path to metadata of the buildings
+    :param meta_df: Dataframe with metadata
+    :param cleaned_df: Dataframe with cleaned energy data
     :return: Merged dataframe of the two datasets
     """
-    # Load energy data
-    energy_df = pd.read_csv(path_to_energy_data)
-    building_id = energy_df['dataid'][0]
+    if cleaned_df is None:
+        if path_to_energy_data:
+            # Load energy data
+            cleaned_df = pd.read_csv(path_to_energy_data)
+        else:
+            raise Exception("Must give either a cleaned energy dataframe or a file when merging cleaned energy data with metadata!")
 
-    # Prepare the meta data
-    meta_df = pd.read_csv(path_to_metadata)
-    meta_df = clean_and_prep_metadata(meta_df, building_id)
+    # Get id of the building
+    building_id = cleaned_df['dataid'][0]
+
+    if meta_df is None:
+        if path_to_metadata:
+            # Prepare the meta data
+            meta_df = pd.read_csv(path_to_metadata)
+            meta_df = clean_and_prep_metadata(meta_df, building_id)
+        else:
+            raise Exception("Must give either a meta dataframe or a file when merging cleaned energy data with metadata!")
+    else:
+        meta_df = meta_df[meta_df.dataid == building_id]
+
+    # Ugly hack to make merging not delete the time column if it exists
+    if cleaned_df.index.name == "local_15min":
+        cleaned_df["local_15min"] = cleaned_df.index
 
     # Merge the two dataframes
-    merged_df = pd.merge(energy_df, meta_df, on="dataid")
+    merged_df = pd.merge(cleaned_df, meta_df, on="dataid")
 
     # Drop building id as we don't need it anymore
     merged_df = merged_df.drop("dataid", axis=1)
@@ -61,9 +82,19 @@ def clean_and_prepare_weather_data(weather_df):
     data for 15 min intervals.
     :param weather_df: The weather dataframe
     """
+    # Get start and endpoint of the weather
+    start = datetime.strptime(weather_df.iloc[0]["localhour"], "%Y-%m-%d %H:%M:%S+%f")
+    end = datetime.strptime(weather_df.iloc[-1]["localhour"], "%Y-%m-%d %H:%M:%S+%f")
+
     # Create custom date range in 15 min intervals, this will be merged with current data eventually to introduce the
     # non-existing 15 min intervals.
-    idx = pd.date_range(start='1/1/2014', end='31/12/2015', freq='15T')
+    idx = pd.date_range(start=start, end=end, freq='15T')
+
+    # Filter columns so we only have the ones we want
+    weather_df = weather_df[weather_columns]
+
+    # Drop any duplicates
+    weather_df = weather_df.drop_duplicates(subset="localhour")
 
     # Hack around to make sure the date is in the correct format
     weather_df['localhour'] = pd.to_datetime(weather_df['localhour'])
@@ -71,7 +102,6 @@ def clean_and_prepare_weather_data(weather_df):
 
     # Set index and drop possible duplicates
     weather_df = weather_df.set_index('localhour')
-    weather_df = weather_df.drop_duplicates()
     weather_df.index = pd.DatetimeIndex(weather_df.index)
 
     # Reindex our weather data with the 15 min interval data
@@ -87,10 +117,12 @@ def clean_and_prepare_weather_data(weather_df):
     weather_df = weather_df.fillna(0)
 
     # Write the file
-    weather_df.to_csv("data/cleaned/weather/tc-weather1415.csv")
+    weather_df.to_csv("data/cleaned/weather/tc-weather-{}-{}.csv".format(start, end))
+
+    return weather_df
 
 
-def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
+def merge_energy_data_with_weather_data(energy_df, path_to_weather_data=None, path_to_tc_weather_data=None):
     """
     Merge the energy data with the weather data. There is energy data every 15 min, and weather data every hour. The
     weather data is first cleaned and 15 min intervals are added, interpolating the data.
@@ -98,23 +130,44 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     :param path_to_weather_data: Path to weather csv
     :return: The merged Dataframe
     """
-    # First load and clean weather data
-    weather_df = pd.read_csv(path_to_weather_data)
-    clean_and_prepare_weather_data(weather_df)
-    weather_df = pd.read_csv("data/cleaned/weather/tc-weather1415.csv")
+    if path_to_tc_weather_data:
+        weather_df = pd.read_csv(path_to_tc_weather_data)
+        weather_df = weather_df.set_index('local_15min')
+    else:
+        if path_to_weather_data:
+            # First load and clean weather data
+            weather_df = pd.read_csv(path_to_weather_data)
+            weather_df = clean_and_prepare_weather_data(weather_df)
+        else:
+            raise Exception("Path to (cleaned) weather data must be given!")
+
+    # # Get start and end of energy data
+    # try:
+    #     tformat = data_cleaning.find_format(str(energy_df.iloc[0]['local_15min']))
+    # except KeyError:
+    #     # Ugly hack for if above does not work
+    #     energy_df['temp'] = energy_df.index
+    #     tformat = data_cleaning.find_format(str(energy_df.iloc[0]['temp']))
+    #     energy_df.drop(columns=['temp'])
+
+    start_section = energy_df.iloc[0]['local_15min']
+    end_section = energy_df.iloc[-1]['local_15min']
+
+    # Drop all weather rows not within the range of our energy data
+    weather_df = weather_df[weather_df.index.isin(pd.date_range(start=start_section, end=end_section, freq='15T'))]
 
     # Rename column with time so we can merge the two dataframes (warning: ugly code)
-    weather_df = weather_df.rename(columns={"localhour": "local_15min"})
-    weather_df['local_15min'] = pd.to_datetime(weather_df['local_15min'])
+    # weather_df = weather_df.rename(columns={"localhour": "local_15min"})
+    # weather_df['local_15min'] = pd.to_datetime(weather_df['local_15min'])
     energy_df['local_15min'] = pd.to_datetime(energy_df['local_15min'])
-    weather_df['local_15min'] = weather_df['local_15min'].dt.strftime("%Y-%m-%d %H:%M:%S")
-    weather_df['local_15min'] = pd.to_datetime(weather_df['local_15min'])
+    # weather_df['local_15min'] = weather_df['local_15min'].dt.strftime("%Y-%m-%d %H:%M:%S")
+    # weather_df['local_15min'] = pd.to_datetime(weather_df['local_15min'])
 
     # print("AFTER DATE RENAMING AND STUFF", energy_df.iloc[68388, :])
 
     # Set the indexes so we know what to merge on
     energy_df = energy_df.set_index('local_15min')
-    weather_df = weather_df.set_index('local_15min')
+    # weather_df = weather_df.set_index('local_15min')
 
     # Merge the two dataframe, followed by all my other failed attempts
     merged_df = pd.concat([energy_df, weather_df], axis=1)
@@ -122,7 +175,7 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     # Change datetime to month, day of the week and hour of the day
     merged_df['month'] = merged_df.index.month
     merged_df['weekday'] = merged_df.index.weekday
-    merged_df['hour'] = merged_df.index.hour  #TODO: WHEN TESTING CURRENT TRAINING BATCH RE-PREPARE THE DATA TO NOT INCLUDE HOUR OF THE DAY!!!!
+    merged_df['hour'] = merged_df.index.hour
 
     # Drop local_15min as we don't need it anymore
     merged_df = merged_df.reset_index()
@@ -134,27 +187,50 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     # merged_df = pd.concat([d.set_index('local_15min') for d in [energy_df, weather_df]], axis=1).reset_index()
     # merged_df = energy_df.set_index('local_15min').combine_first(weather_df.set_index('local_15min')).reset_index()
     # merged_df = pd.merge(energy_df, weather_df, on="local_15min")
+
     return merged_df
 
 
-def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_data, output_folder):
+def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_data, output_folder, cleaned_dfs=None):
     """
     Function to prepare all the data, assuming it has already been cleaned.
     :param path_to_energy_data_folder: Path to folder containing energy data over time
     :param path_to_metadata: Path to metadata of the buildings
     :param path_to_weather_data: Path to hourly weather data
     :param output_folder: Folder to output prepared data
+    :param cleaned_dfs: Optional parameter to already give the cleaned dataframes instead of having to read them out.
     """
     print("========= Preparing data as input for NN to " + output_folder + " =========")
+
+    # Prepare the meta data
+    meta_df = data_cleaning.clean_building_metadata(output_folder=None)
+
     # Prepare each file one by one
-    for filename in os.listdir(path_to_energy_data_folder):
-        if ".csv" in filename:
-            print("Preparing", filename)
-            df = merge_energy_data_with_metadata(os.path.join(path_to_energy_data_folder, filename), path_to_metadata)
+    if cleaned_dfs:
+        i = 0
+        total = len(cleaned_dfs)
+        for cleaned_df in cleaned_dfs:
+            i += 1
+            print("Preparing cleaned df {} of {}".format(i, total))
+            energy_df = merge_energy_data_with_metadata(cleaned_df=cleaned_df, meta_df=meta_df)
 
-            prepared_df = merge_energy_data_with_weather_data(df, path_to_weather_data)
+            prepared_df = merge_energy_data_with_weather_data(energy_df, path_to_weather_data)
 
-            prepared_df.to_csv(os.path.join(output_folder, "p-" + filename), index=False)
+            # Get id of the building
+            building_id = cleaned_df['dataid'][0]
+
+            prepared_df.to_csv(os.path.join(output_folder, "p-" + str(int(building_id)) + ".csv"), index=False)
+    else:
+        for filename in os.listdir(path_to_energy_data_folder):
+            if ".csv" in filename:
+                print("Preparing", filename)
+                energy_df = merge_energy_data_with_metadata(path_to_metadata=path_to_metadata,
+                                                            path_to_energy_data=os.path.join(path_to_energy_data_folder,
+                                                                                             filename))
+
+                prepared_df = merge_energy_data_with_weather_data(energy_df, path_to_weather_data)
+
+                prepared_df.to_csv(os.path.join(output_folder, "p-" + filename), index=False)
 
 
 def normalize_data(path_to_data):
@@ -215,12 +291,16 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pi
 
 
 def the_whole_shibang():
-    # data_cleaning.time_clean_building_energy()
-    prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered_no_energy_indicator.csv", "data/weather1415.csv", "data/prepared/")
+    cleaned_dfs = data_cleaning.time_clean_building_energy()
+    prepare_data("data/cleaned/building_energy/", "data/cleaned/metadata/tc-buildings_metadata.csv", "data/weather_all.csv", "data/prepared/", cleaned_dfs=cleaned_dfs)
     normalize_and_pickle_prepared_data()
 
 
-# prepare_data("data/cleaned/building_energy/", "data/buildings_metadata_filtered.csv", "data/weather1415.csv", "data/prepared")
+# data_cleaning.time_clean_building_energy()
+# prepare_data("data/cleaned/building_energy/", "data/cleaned/metadata/tc-buildings_metadata.csv", "data/weather1415.csv", "data/prepared")
 # normalize_data("data/prepared")
 # normalize_and_pickle_prepared_data()
 the_whole_shibang()
+
+# cleaned_dfs = data_cleaning.time_clean_building_energy()
+# prepare_data("data/cleaned/building_energy/", "data/cleaned/metadata/tc-buildings_metadata.csv", "data/weather_all.csv", "data/prepared/")

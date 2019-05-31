@@ -7,7 +7,7 @@ buildings = 15
 batch_size = 256
 
 # Define the amount of features in the input and the output
-input_feature_amount = 84  # 84 without static indicators, 151 with.
+input_feature_amount = 83  # 84 without static indicators, 151 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU

@@ -95,7 +95,7 @@ def analyse_building_energy_data(folder="data/raw/building_energy/"):
             print("Percentage missing data:", str(calculate_percentage_missing_data(os.path.join(folder, filename), 900, "local_15min") * 100) + "%")
 
 
-def clean_data_on_time_range(file, t_colname, start, end, freq, output_folder):
+def clean_data_on_time_range(t_colname, start, end, freq, output_folder=None, file=None, df=None):
     """
     Fill in missing rows by datetime in pandas and fill NaNs with 0.
     :param file: path of file to insert missing data into, must be .csv
@@ -103,30 +103,128 @@ def clean_data_on_time_range(file, t_colname, start, end, freq, output_folder):
     :param end: End date, can be formatted like: '31/12/2014'
     :param freq: Frequency between timestamps, for aliases that can be used see here: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     :param output_folder: Folder to output the time cleaned file to.
+    :param write_file: Boolean whether to write the result
+    :param df: Optional parameter to use an already existing dataframe
     """
     # Make custom time range used to fill missing data
     idx = pd.date_range(start=start, end=end, freq=freq)
 
-    # Read dataset to clean and setup the index
-    dataset = pd.read_csv(file)
-    dataset = dataset.set_index(t_colname)
-    dataset.index = pd.DatetimeIndex(dataset.index)
+    if df is None:
+        if file:
+            # Read dataset to clean and setup the index
+            df = pd.read_csv(file)
+            df = df.set_index(t_colname)
+            df.index = pd.DatetimeIndex(df.index)
+        else:
+            raise Exception("Must give either a dataframe or a file when cleaning on a time range!")
 
     # Drop any possible duplicates
-    dataset = dataset.drop_duplicates()
+    df = df.drop_duplicates()
 
     # Reindex dataset, filling missing data with NaNs from custom time range
-    dataset = dataset.reindex(idx, fill_value=None)
+    df = df.reindex(idx, fill_value=None)
 
     # Interpolate the missing data
-    dataset = dataset.interpolate()
-    dataset.index.name = t_colname
+    df = df.interpolate()
+    df.index.name = t_colname
 
     # Fill any last NaN with 0s
-    dataset = dataset.fillna(0)
+    df = df.fillna(0)
 
-    # Write the file
-    dataset.to_csv(os.path.join(output_folder, "tc-" + file.split("/")[-1]))
+    if output_folder:
+        # Write the file
+        df.to_csv(os.path.join(output_folder, "tc-" + file.split("/")[-1]))
+
+    return df
+
+
+def find_largest_section(df, tdelta, t_colname, gap_ratio=16):
+    """
+    Function to find large gaps in a dataframe
+    :param df: The dataframe
+    :param tdelta: The difference between data points, in seconds
+    :param t_colname: The name of column in .csv file containing timestamps
+    :param gap_ratio: The ratio threshold
+    :return: Tuple with preferred start and end point for df
+    """
+    # Get the proper timeformat for this dataframe
+    tformat = find_format(df.iloc[0][t_colname])
+
+    # Define start and end of dataframe
+    start = datetime.strptime(df.iloc[0][t_colname], tformat)
+    end = datetime.strptime(df.iloc[-1][t_colname], tformat)
+
+    # Define start and end of a section
+    start_section = start
+    end_section = None
+
+    sections = []
+
+    for index, row in df.iterrows():
+        # If we're at index 0, set the previous time
+        if index == 0:
+            prev_time = row[t_colname]
+            continue
+        diff = datetime.strptime(row[t_colname], tformat) - datetime.strptime(prev_time, tformat)
+        if diff.total_seconds() == tdelta:
+            prev_time = row[t_colname]
+            continue
+        else:
+            # If the total difference is larger than tdelta * ratio the gap is too large and we have an end/start point
+            if diff.total_seconds() > (pd.to_timedelta(tdelta).total_seconds() * gap_ratio):
+                if start_section:
+                    end_section = datetime.strptime(prev_time, tformat)
+                    sections.append(((end_section - start_section).total_seconds(), start_section, end_section))
+                    start_section = datetime.strptime(row[t_colname], tformat)
+                    end_section = None
+                    prev_time = row[t_colname]
+                    continue
+                else:
+                    start_section = datetime.strptime(row[t_colname], tformat)
+                    prev_time = row[t_colname]
+                    continue
+            else:
+                prev_time = row[t_colname]
+                continue
+
+    # In the end, if there is no end section for the current section, set it to the last entry in our df
+    if not end_section:
+        end_section = end
+        sections.append(((end_section - start_section).total_seconds(), start_section, end_section))
+
+    # Return largest found section
+    return max(sections, key=lambda item: item[0])
+
+
+def clean_data_with_threshold_missing(path_to_file, t_colname, tdelta, output_folder=None):
+    """
+    Function to clean data on a non-specific time range, but does cut off parts of the data if too much is missing
+    :param path_to_file: Path to file
+    :param t_colname: Column name of time column
+    :param tdelta: The difference between data points, in seconds
+    :param output_folder: The folder to output the cleaned data
+    :return:
+    """
+    # Read dataset to clean and setup the index
+    df = pd.read_csv(path_to_file)
+
+    # Find the largest section to be used for the data
+    _, start_section, end_section = find_largest_section(df, tdelta, t_colname)
+
+    # Set index of dataframe to be the datatime
+    df = df.set_index(t_colname)
+    df.index = pd.DatetimeIndex(df.index)
+
+    # Drop all rows not within the range of the largest section
+    df = df[df.index.isin(pd.date_range(start=start_section, end=end_section, freq=tdelta))]
+
+    df = clean_data_on_time_range(t_colname=t_colname, start=start_section, end=end_section, freq=tdelta, df=df)
+
+    if output_folder:
+        # Write the file
+        df.to_csv(os.path.join(output_folder, "tc-" + path_to_file.split("/")[-1]))
+
+    return df
 
 
 def time_clean_building_energy(input_folder="data/raw/building_energy/", output_folder="data/cleaned/building_energy/"):
@@ -135,17 +233,24 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
     :param input_folder:
     """
     print("========= Performing time cleaning on " + input_folder + " =========")
+    cleaned_dfs = []
     for filename in os.listdir(input_folder):
         if ".csv" in filename:
+            # Clean the dataframe
             print("Time cleaning", filename)
-            clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2015', freq="15T", output_folder=output_folder)
+            # clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2015', freq="15T", output_folder=output_folder)
+            cleaned_df = clean_data_with_threshold_missing(path_to_file=os.path.join(input_folder, filename), t_colname="local_15min",
+                                              tdelta="15T", output_folder=output_folder)
+            cleaned_dfs.append(cleaned_df)
+
+    return cleaned_dfs
 
 
-def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", output_folder="data/cleaned/metadata/"):
+def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", output_folder="data/cleaned/metadata/", write_file=True):
     # Load in the data
     df = pd.read_csv(path_to_metadata)
 
-    # Filter column so we only have the ones we want
+    # Filter columns so we only have the ones we want
     df = df[metadata_columns]
 
     # Fill the NaNs
@@ -158,13 +263,17 @@ def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", outp
     df_no_sq_ft = df['total_square_footage'] != 0
     df = df[df_no_sq_ft]
 
-    # Write the cleaned metadata
-    df.to_csv(os.path.join(output_folder, "tc-" + path_to_metadata.split("/")[-1]), index=False)
+    if output_folder:
+        # Write the cleaned metadata
+        df.to_csv(os.path.join(output_folder, "tc-" + path_to_metadata.split("/")[-1]), index=False)
+
+    return df
 
 
 
 # clean_building_metadata()
-
+# print_difference_between_missing_data("data/raw/building_energy/4767-building_data.csv", 3600/4, "local_15min")
+# print(calculate_percentage_missing_data("data/raw/building_energy/4767-building_data.csv", 3600/4, "local_15min"))
 
 # time_clean_building_energy()
 #
@@ -173,8 +282,13 @@ def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", outp
 # analyse_building_energy_data()
 # analyse_building_energy_data("data/cleaned/building_energy/")
 #
-# print_difference_between_missing_data("data/cleaned/weather/tc-weather1415.csv", 3600/4, "local_15min")
-# print(calculate_percentage_missing_data("data/cleaned/weather/tc-weather1415.csv", 3600/4, "local_15min"))
+
+# print_difference_between_missing_data("data/raw/building_energy/4767-building_data.csv", 3600/4, "local_15min")
+# print(calculate_percentage_missing_data("data/raw/building_energy/4767-building_data.csv", 3600/4, "local_15min"))
+
+# print_difference_between_missing_data("data/cleaned/weather/tc-weather-2011-01-01 06:00:00-2019-05-24 23:00:00.csv", 3600/4, "local_15min")
+# print_difference_between_missing_data("data/weather_all.csv", 3600, "localhour")
+# print(calculate_percentage_missing_data("data/weather_all.csv", 3600, "localhour"))
 #
 # df = pd.read_csv("data/cleaned/building_energy/tc-114-building_data-2014.csv")
 # print(df.head(5))
