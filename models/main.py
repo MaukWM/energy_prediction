@@ -17,7 +17,7 @@ state_size = 96
 seq_len_in = 96 * 2
 seq_len_out = 96
 
-plot_last_time_steps_view = 96 * 2
+plot_last_time_steps_view = 96 * 3
 
 normalized_input_data, output_data = load_data()
 

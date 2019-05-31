@@ -1,5 +1,6 @@
 import os
 import pickle
+import matplotlib.pyplot as plt
 
 
 def load_data():
@@ -11,3 +12,16 @@ def load_data():
             return pickle.load(input_data)
             # open("../data/prepared/input_data.pkl", "rb")
     print("ERROR: Pickle file was not found!")
+
+
+def plot_attention_weights(attention_weights):
+    """
+    Plots attention weights
+    :param attention_weights: sequence of attention weights: [seq_len_out, seq_len_in]
+    :return:
+    """
+    plt.matshow(attention_weights)
+
+    plt.show()
+
+    attention_weights.transpose()

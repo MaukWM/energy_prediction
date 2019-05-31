@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import keras as ks
 import matplotlib.pyplot as plt
@@ -6,7 +8,7 @@ from tensorflow.python.keras.optimizers import Adam
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount
+    state_size, input_feature_amount, output_feature_amount, generate_validation_sample
 
 # Define some variables for generating batches
 from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_model
@@ -26,6 +28,7 @@ from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_m
 # seq_len_out = 96
 #
 # plot_last_time_steps_view = 96 * 2
+from utils import plot_attention_weights
 
 
 def make_attention_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
@@ -47,14 +50,21 @@ def make_attention_prediction(E, D, previous_timesteps_x, previous_y, n_output_t
     # It might be neater to feed a start symbol instead
     dec_out = np.expand_dims(previous_y, axis=0)
     outputs = []
+    attention_weights = []
     for i in range(n_output_timesteps):
         dec_out, attention, dec_state = D.predict([enc_outs, dec_state, dec_out])
         outputs.append(dec_out)
 
+        # Add attention weights
+        attention_weights.append(attention)
+
+    # Reshape and transpose attention weights so they make more sense
+    attention_weights = np.reshape(np.stack(attention_weights), newshape=(seq_len_out, seq_len_in)).transpose()
+
     # Concatenate the outputs, as they are batches
     # For example, going from a list of (1,1,1) to one unit of (1,100,1)
     # So we take the 0th element from the batch which are our outputs
-    return np.concatenate(outputs, axis=1)[0]
+    return np.concatenate(outputs, axis=1)[0], attention_weights
 
 
 def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, intermediates=1, load_weights_path=None,
@@ -131,7 +141,7 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     :return: Made predictions.
     """
     # Make a prediction on the given data
-    predictions = make_attention_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
+    predictions, attention_weights = make_attention_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
                                             seq_len_out)
 
     if plot:
@@ -143,6 +153,8 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
         plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
         plt.legend()
         plt.show()
+
+    plot_attention_weights(attention_weights)
 
     return predictions
 
@@ -182,16 +194,16 @@ if __name__ == "__main__":
                                                                          state_size=state_size, seq_len_in=seq_len_in,
                                                                          seq_len_out=seq_len_out)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00045, plot_yscale='linear', load_weights_path=None, intermediates=100)
+    # train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00045, plot_yscale='linear', load_weights_path=None, intermediates=100)
 
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/as2s-l0.00045-ss96-tl0.213-vl0.392-i192-o96-e1500-seq2seq.h5")
 
-    # predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
     # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 
-    # predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
+    predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 
 
 

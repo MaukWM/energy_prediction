@@ -119,9 +119,10 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     # Merge the two dataframe, followed by all my other failed attempts
     merged_df = pd.concat([energy_df, weather_df], axis=1)
 
-    # Change datetime to month and day of the week
+    # Change datetime to month, day of the week and hour of the day
     merged_df['month'] = merged_df.index.month
     merged_df['weekday'] = merged_df.index.weekday
+    merged_df['hour'] = merged_df.index.hour
 
     # Drop local_15min as we don't need it anymore
     merged_df = merged_df.reset_index()
