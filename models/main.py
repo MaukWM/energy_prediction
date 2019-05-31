@@ -7,7 +7,7 @@ buildings = 15
 batch_size = 256
 
 # Define the amount of features in the input and the output
-input_feature_amount = 83  # 83 without static indicators, 150 with.
+input_feature_amount = 84  # 84 without static indicators, 151 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
@@ -185,3 +185,5 @@ def generate_testing_sample():
     batch_xd = np.stack(batch_xd)
     batch_y = np.stack(batch_y)
     return [batch_xe, batch_xd], batch_y, batch_y_prev
+
+#TODO: WHEN TESTING CURRENT TRAINING BATCH RE-PREPARE THE DATA TO NOT INCLUDE HOUR OF THE DAY!!!!

@@ -122,7 +122,7 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data):
     # Change datetime to month, day of the week and hour of the day
     merged_df['month'] = merged_df.index.month
     merged_df['weekday'] = merged_df.index.weekday
-    merged_df['hour'] = merged_df.index.hour
+    merged_df['hour'] = merged_df.index.hour  #TODO: WHEN TESTING CURRENT TRAINING BATCH RE-PREPARE THE DATA TO NOT INCLUDE HOUR OF THE DAY!!!!
 
     # Drop local_15min as we don't need it anymore
     merged_df = merged_df.reset_index()
@@ -151,15 +151,9 @@ def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_d
         if ".csv" in filename:
             print("Preparing", filename)
             df = merge_energy_data_with_metadata(os.path.join(path_to_energy_data_folder, filename), path_to_metadata)
-            # if '1642' in filename:
-            #     print(df.iloc[68388, :])
-            # indexes = df['use'].index[df['use'].apply(np.isnan)]
-            # print("after merging with metadata", filename, [df.index(i) for i in indexes])
+
             prepared_df = merge_energy_data_with_weather_data(df, path_to_weather_data)
-            # indexes = df['use'].index[df['use'].apply(np.isnan)]
-            # print("after merging with weather data", filename, [df.index(i) for i in indexes])
-            # if '1642' in filename:
-            #     print(prepared_df.iloc[68388, :])
+
             prepared_df.to_csv(os.path.join(output_folder, "p-" + filename), index=False)
 
 

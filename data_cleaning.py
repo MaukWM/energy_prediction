@@ -9,6 +9,8 @@ pd.set_option('display.width', 1000)
 
 time_formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S+%f"]
 
+metadata_columns = ['dataid', 'pv', 'has_electric_vehicle', 'has_quick_charge_port', 'total_square_footage']
+
 
 def print_difference_between_missing_data(file, tdelta, t_colname, tformat=None):
     """
@@ -137,6 +139,31 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
         if ".csv" in filename:
             print("Time cleaning", filename)
             clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2015', freq="15T", output_folder=output_folder)
+
+
+def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", output_folder="data/cleaned/metadata/"):
+    # Load in the data
+    df = pd.read_csv(path_to_metadata)
+
+    # Filter column so we only have the ones we want
+    df = df[metadata_columns]
+
+    # Fill the NaNs
+    df = df.fillna(0)
+
+    # Change yes' to 1s
+    df = df.replace(to_replace="yes", value=1)
+
+    # Get all dataframes with no square footage indication and drop them
+    df_no_sq_ft = df['total_square_footage'] != 0
+    df = df[df_no_sq_ft]
+
+    # Write the cleaned metadata
+    df.to_csv(os.path.join(output_folder, "tc-" + path_to_metadata.split("/")[-1]), index=False)
+
+
+
+# clean_building_metadata()
 
 
 # time_clean_building_energy()
