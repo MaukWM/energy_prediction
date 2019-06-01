@@ -3,11 +3,11 @@ import numpy as np
 
 from utils import load_data
 
-buildings = 15
-batch_size = 256
+buildings = 14
+batch_size = 64
 
 # Define the amount of features in the input and the output
-input_feature_amount = 83  # 84 without static indicators, 151 with.
+input_feature_amount = 84  # 84 without static indicators, 151 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
@@ -21,6 +21,8 @@ plot_last_time_steps_view = 96 * 3
 
 normalized_input_data, output_data = load_data()
 
+# TODO: reprepare data for missing building 2818
+
 
 def generate_validation_data():
     """
@@ -31,13 +33,16 @@ def generate_validation_data():
     test_xd_batches = []
     test_y_batches = []
 
+    # TODO: Doesn't this take training + testing??? fix pls
+    test_x, test_y = normalized_input_data, output_data # normalized_input_data[:, normalized_input_data.shape[1]//4], output_data[:, output_data.shape[1]//4]
+
     for i in range(len(normalized_input_data)):
         for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
             if j % 1500 == 0:
-                test_xe_batches.append(normalized_input_data[i][j:j+seq_len_in])
-                test_xd_batches.append(output_data[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
-                test_y_batches.append(output_data[i][j + seq_len_in:j + seq_len_in + seq_len_out])
+                test_xe_batches.append(test_x[i][j:j+seq_len_in])
+                test_xd_batches.append(test_y[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
+                test_y_batches.append(test_y[i][j + seq_len_in:j + seq_len_in + seq_len_out])
 
     test_xe_batches = np.stack(test_xe_batches, axis=0)
     test_xd_batches = np.stack(test_xd_batches, axis=0)
@@ -51,10 +56,18 @@ def generate_batches():
     Generate batch to be used in training
     :return: Batch for encoder and decoder inputs and a batch for output
     """
-    while True:
-        # Split into training and testing set
-        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//2], output_data[:, :output_data.shape[1]//2]
+    # Split into training set
+    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
+        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//4], output_data[:, :output_data.shape[1]//4]
+    else:
+        train_x = []
+        train_y = []
+        for building in normalized_input_data:
+            train_x.append(building[:int(len(building) * 0.75)])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in output_data:
+            train_y.append(building[:int(len(building) * 0.75)])
 
+    while True:
         # Batch input for encoder
         batch_xe = []
         # Batch input for decoder for guided training
@@ -86,8 +99,16 @@ def generate_batch():
     Generate single batch
     :return: Batch for encoder and decoder inputs and a batch for output
     """
-    # Split into training and testing set
-    train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//2], output_data[:, :output_data.shape[1]//2]
+    # Split into training set
+    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
+        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//4], output_data[:, :output_data.shape[1]//4]
+    else:
+        train_x = []
+        train_y = []
+        for building in normalized_input_data:
+            train_x.append(building[:int(len(building) * 0.75)])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in output_data:
+            train_y.append(building[:int(len(building) * 0.75)])
 
     # Batch input for encoder
     batch_xe = []
@@ -120,8 +141,17 @@ def generate_validation_sample():
     Generate batch to be used for validation, also return the previous ys so we can plot the input as well
     :return: Batch for encoder and decoder inputs and a batch for output
     """
-    # Split into training and testing set
-    test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//2:], output_data[:, output_data.shape[1]//2:]
+    # Split into testing set
+    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
+        #TODO: Check if this needs minus
+        test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//4:], output_data[:, output_data.shape[1]//4:]
+    else:
+        test_x = []
+        test_y = []
+        for building in normalized_input_data:
+            test_x.append(building[-int(len(building) * 0.25):])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in output_data:
+            test_y.append(building[-int(len(building) * 0.25):])
 
     # Batch input for encoder
     batch_xe = []
@@ -156,8 +186,16 @@ def generate_testing_sample():
     Generate batch to be used for validation, also return the previous ys so we can plot the input as well
     :return: Batch for encoder and decoder inputs and a batch for output
     """
-    # Split into training and testing set
-    test_x, test_y = normalized_input_data[:, :normalized_input_data.shape[1]//2], output_data[:, :output_data.shape[1]//2]
+    # Split into training set
+    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
+        test_x, test_y = normalized_input_data[:, :normalized_input_data.shape[1]//4], output_data[:, :output_data.shape[1]//4]
+    else:
+        test_x = []
+        test_y = []
+        for building in normalized_input_data:
+            test_x.append(building[-int(len(building) * 0.25):])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in output_data:
+            test_y.append(building[-int(len(building) * 0.25):])
 
     # Batch input for encoder
     batch_xe = []

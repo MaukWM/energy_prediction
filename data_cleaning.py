@@ -3,6 +3,9 @@ import os
 import pandas as pd
 from datetime import datetime
 
+# When changing this also change in data_preparation.py
+column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
+
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.width', 1000)
@@ -140,13 +143,17 @@ def clean_data_on_time_range(t_colname, start, end, freq, output_folder=None, fi
 
 def find_largest_section(df, tdelta, t_colname, gap_ratio=16):
     """
-    Function to find large gaps in a dataframe
+    Function to find the largest continuous section (with some wiggle room). Also viewing rows with empty value for
+    predicting column as gaps.
     :param df: The dataframe
     :param tdelta: The difference between data points, in seconds
     :param t_colname: The name of column in .csv file containing timestamps
     :param gap_ratio: The ratio threshold
     :return: Tuple with preferred start and end point for df
     """
+    # Remove all rows that contain a NaN value for the predicting column
+    df = df[df[column_data_to_predict_name].notnull()]
+
     # Get the proper timeformat for this dataframe
     tformat = find_format(df.iloc[0][t_colname])
 
@@ -160,11 +167,11 @@ def find_largest_section(df, tdelta, t_colname, gap_ratio=16):
 
     sections = []
 
+    # Initialize first timestep
+    # If we're at index 0, set the previous time
+    prev_time = df.iloc[0][t_colname]
+
     for index, row in df.iterrows():
-        # If we're at index 0, set the previous time
-        if index == 0:
-            prev_time = row[t_colname]
-            continue
         diff = datetime.strptime(row[t_colname], tformat) - datetime.strptime(prev_time, tformat)
         if diff.total_seconds() == tdelta:
             prev_time = row[t_colname]

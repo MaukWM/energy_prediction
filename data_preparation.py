@@ -11,8 +11,8 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', 500000)
 pd.set_option('display.width', 10000000)
 
-DATA_LENGTH = 69986
-column_data_to_predict = [0]  # 0 is use column, 28 is grid column
+# When changing this also change in data_cleaning.py
+column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
 
 weather_columns = ['localhour', 'temperature', 'dew_point', 'humidity', 'visibility', 'apparent_temperature', 'pressure', 'wind_speed', 'cloud_cover', 'precip_intensity', 'precip_probability']
 
@@ -258,20 +258,50 @@ def normalize_data(path_to_data):
             collected_data.append(data)
     print("============================")
 
+    prev_shape = np.shape(collected_data[0])[0]
+    matching_shapes = True
+
+    for building in collected_data:
+        current_shape = np.shape(building)[0]
+        if not prev_shape == current_shape:
+            matching_shapes = False
+            break
+        prev_shape = current_shape
+
     # Calculate mean and std of each column so we can normalize the data.
-    stacked_collected_data = np.stack(collected_data)
-    stacked_collected_data_mean = np.mean(stacked_collected_data, axis=(0, 1))
-    stacked_collected_data_std = np.std(stacked_collected_data, axis=(0, 1))
+    if matching_shapes:
+        stacked_collected_data = np.stack(collected_data)
+        collected_data_mean = np.mean(stacked_collected_data, axis=(0, 1))
+        collected_data_std = np.std(stacked_collected_data, axis=(0, 1))
+    else:
+        concatenated_collected_data = np.concatenate(collected_data, axis=0)
+        collected_data_mean = np.mean(concatenated_collected_data, axis=0)
+        collected_data_std = np.std(concatenated_collected_data, axis=0)
 
     # Loop over calculated mean and std. Change the std to 1 if the column in the data was fully static, since if the
     # column is static it must be either 1 or 0. And dividing by 0 is of course not allowed.
-    for i in range(len(stacked_collected_data_std)):
-        if stacked_collected_data_std[i] == 0:
-            stacked_collected_data_std[i] = 1
-            stacked_collected_data_mean[i] = 0
+    for i in range(len(collected_data_std)):
+        if collected_data_std[i] == 0:
+            collected_data_std[i] = 1
+            collected_data_mean[i] = 0
 
+    # If all shapes were matching do numpy magic to return normalized data and data to predict
+    if matching_shapes:
+        return (collected_data - collected_data_mean) / collected_data_std, np.take(collected_data, indices=column_data_to_predict, axis=2)
+
+    normalized_collected_data = []
     # Calculate the normalized data
-    return (collected_data - stacked_collected_data_mean) / stacked_collected_data_std, np.take(collected_data, indices=column_data_to_predict, axis=2)
+    for building in collected_data:
+        building = building - collected_data_mean / collected_data_std
+        normalized_collected_data.append(building)
+
+    data_to_predict = []
+    # Grab the column containing the to predict value
+    for building in collected_data:
+        to_predict = np.take(building, indices=column_data_to_predict, axis=1)
+        data_to_predict.append(to_predict)
+
+    return normalized_collected_data, data_to_predict
 
 
 def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pickle_output_path=None):
