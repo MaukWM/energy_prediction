@@ -3,14 +3,17 @@ import pickle
 import matplotlib.pyplot as plt
 
 
-def load_data():
+def load_data(pkl_path=None):
+    if pkl_path:
+        input_data = open(pkl_path, "rb")
+        return pickle.load(input_data)
     start_dir = "../.."
-    pkl_data = "input_data.pkl"
+    pkl_data = "input_data-f84-0206.pkl"
     for root, dirs, files in os.walk(start_dir):
         if pkl_data in files:
             input_data = open(os.path.join(root, pkl_data), "rb")
             return pickle.load(input_data)
-            # open("../data/prepared/input_data.pkl", "rb")
+            # open("../data/prepared/input_data-f84-0206.pkl", "rb")
     print("ERROR: Pickle file was not found!")
 
 

@@ -10,11 +10,9 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     x_enc = ks.Input(shape=(seq_len_in, input_feature_amount), name="x_enc")
     x_dec = ks.Input(shape=(None, output_feature_amount), name="x_dec")
 
-    input_conv4 = ks.layers.Conv1D(filters=46, kernel_size=7, strides=2, activation='relu')(x_enc)
-    input_conv3 = ks.layers.Conv1D(filters=46, kernel_size=5, strides=1, activation='relu')(input_conv4)
-    input_conv2 = ks.layers.Conv1D(filters=46, kernel_size=5, strides=2, activation='relu')(input_conv3)
-    input_conv1 = ks.layers.Conv1D(filters=46, kernel_size=3, strides=1, activation='relu')(input_conv2)
-    input_conv = ks.layers.Conv1D(filters=46, kernel_size=3, strides=2, activation='relu')(input_conv1)
+    input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')(x_enc)
+    input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')(input_conv2)
+    input_conv = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', name="last_conv_layer")(input_conv1)
 
     # Define the encoder GRU, which only has to return a state
     _, state = ks.layers.GRU(state_size, return_state=True)(input_conv)

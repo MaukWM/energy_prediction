@@ -5,7 +5,7 @@ from keras.losses import mean_absolute_percentage_error
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount
+    state_size, input_feature_amount, output_feature_amount, validation_metrics
 from models.seq2seq.seq2seq import build_seq2seq_model
 
 # # Define some variables for generating batches
@@ -79,10 +79,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     for i in range(intermediates):
         try:
-            encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
-                                                                                            # mean_absolute_percentage_error
-                                                                                            # ks.losses.mean_absolute_error
-                                                                                            ])
+            encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)
@@ -178,8 +175,8 @@ if __name__ == "__main__":
                                                         output_feature_amount=output_feature_amount,
                                                         state_size=state_size)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00045, plot_yscale='linear', load_weights_path=None, intermediates=100)
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
 
     # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
 

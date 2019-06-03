@@ -8,7 +8,7 @@ from tensorflow.python.keras.optimizers import Adam
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount, generate_validation_sample
+    state_size, input_feature_amount, output_feature_amount, generate_validation_sample, validation_metrics
 
 # Define some variables for generating batches
 from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_model
@@ -92,10 +92,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     for i in range(intermediates):
         try:
-            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
-                                                                                            mean_absolute_percentage_error
-                                                                                            # ks.losses.mean_absolute_error
-                                                                                            ])
+            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)
@@ -190,14 +187,16 @@ if __name__ == "__main__":
 
     # Build the model
     encoder, decoder, encdecmodel = build_seq2seq_attention_model(input_feature_amount=input_feature_amount,
-                                                                         output_feature_amount=output_feature_amount,
-                                                                         state_size=state_size, seq_len_in=seq_len_in,
-                                                                         seq_len_out=seq_len_out)
+                                                                  output_feature_amount=output_feature_amount,
+                                                                  state_size=state_size, seq_len_in=seq_len_in,
+                                                                  seq_len_out=seq_len_out)
 
-    # train(encdecmodel=encdecmodel, steps_per_epoch=150, epochs=100, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00045, plot_yscale='linear', load_weights_path=None, intermediates=100)
+    encdecmodel.summary()
 
-    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/as2s-l0.00045-ss96-tl0.213-vl0.392-i192-o96-e1500-seq2seq.h5")
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
+
+    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00045-ss96-tl0.322-vl0.341-i192-o96-e1000-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 

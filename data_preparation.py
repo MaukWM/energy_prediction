@@ -278,6 +278,9 @@ def normalize_data(path_to_data):
         collected_data_mean = np.mean(concatenated_collected_data, axis=0)
         collected_data_std = np.std(concatenated_collected_data, axis=0)
 
+        print("collected_data_mean", collected_data_mean)
+        print("collected_data_std", collected_data_std)
+
     # Loop over calculated mean and std. Change the std to 1 if the column in the data was fully static, since if the
     # column is static it must be either 1 or 0. And dividing by 0 is of course not allowed.
     for i in range(len(collected_data_std)):
@@ -315,14 +318,14 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pi
     if pickle_output_path:
         pickle_file = open(pickle_output_path, "wb")
     else:
-        pickle_file = open(os.path.join(prepared_data_folder, "input_data.pkl"), "wb")
+        pickle_file = open(os.path.join(prepared_data_folder, "input_data-f84-0306.pkl"), "wb")
     pickle.dump((normalized_collected_input_data, output_data), pickle_file)
     pickle_file.close()
 
 
 def the_whole_shibang():
-    cleaned_dfs = data_cleaning.time_clean_building_energy()
-    prepare_data("data/cleaned/building_energy/", "data/cleaned/metadata/tc-buildings_metadata.csv", "data/weather_all.csv", "data/prepared/", cleaned_dfs=cleaned_dfs)
+    # cleaned_dfs = data_cleaning.time_clean_building_energy()
+    prepare_data("data/cleaned/building_energy/", "data/cleaned/metadata/tc-buildings_metadata.csv", "data/weather_all.csv", "data/prepared/")
     normalize_and_pickle_prepared_data()
 
 

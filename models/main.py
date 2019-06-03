@@ -1,25 +1,33 @@
 import numpy as np
+from keras.losses import mean_absolute_percentage_error
 
-
+from metrics import mean_error
 from utils import load_data
 
-buildings = 14
-batch_size = 64
+buildings = 15
+batch_size = 512
 
 # Define the amount of features in the input and the output
 input_feature_amount = 84  # 84 without static indicators, 151 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 96
+state_size = 128
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 2
+seq_len_in = 96
 seq_len_out = 96
 
-plot_last_time_steps_view = 96 * 3
+plot_last_time_steps_view = 96 * 2
 
-normalized_input_data, output_data = load_data()
+normalized_input_data, output_data = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f84-0306.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
+
+validation_metrics = [mean_error
+           # mean_absolute_percentage_error
+           # ks.losses.mean_absolute_error
+           ]
+
+# print(normalized_input_data[0][0])
 
 # TODO: reprepare data for missing building 2818
 
@@ -47,6 +55,10 @@ def generate_validation_data():
     test_xe_batches = np.stack(test_xe_batches, axis=0)
     test_xd_batches = np.stack(test_xd_batches, axis=0)
     test_y_batches = np.stack(test_y_batches, axis=0)
+
+    # print("xe", np.shape(test_xe_batches))
+    # print("xd", np.shape(test_xd_batches))
+    # print("y", np.shape(test_y_batches))
 
     return [test_xe_batches, test_xd_batches], test_y_batches
 

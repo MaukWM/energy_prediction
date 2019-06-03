@@ -6,7 +6,8 @@ from tensorflow.python.keras.optimizers import Adam
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount, generate_validation_sample
+    state_size, input_feature_amount, output_feature_amount, generate_validation_sample, validation_metrics, \
+    generate_testing_sample
 
 from models.seq2seq_1dconv_attention.seq2seq_1dconv_attention import build_seq2seq_1dconv_attention_model
 
@@ -89,10 +90,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     for i in range(intermediates):
         try:
-            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=[metrics.mean_error,
-                                                                                            mean_absolute_percentage_error
-                                                                                            # ks.losses.mean_absolute_error
-                                                                                            ])
+            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)
@@ -157,29 +155,37 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
 
 
 def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
-    encdecmodel.compile(ks.optimizers.Adam(1), metrics.root_mean_squared_error)
+    encdecmodel.compile(Adam(1), metrics.root_mean_squared_error)
 
     eval_loss = encdecmodel.evaluate(predict_x_batches, predict_y_batches,
                                      batch_size=1, verbose=1)
 
     predictions = predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev, plot=False)
 
+    # print("x_batches0", predict_x_batches[0])
+    # print("x_batches1", predict_x_batches[1])
+    #
+    # print("y_batches", predict_y_batches)
+    # print("y_batches_prev", predict_y_batches_prev)
+
+    # print(predictions)
+
     real = predict_y_batches[0]
 
     real_mean = np.mean(real)
 
-    rrse_upper = np.sum(np.square(np.subtract(predictions, real)))
-    rrse_lower = np.sum(np.square(np.subtract(np.full(predictions.size, real_mean), real)))
-    rrse = rrse_upper / rrse_lower
-
-    nrmsem = eval_loss / (np.amax(real) - np.amin(real))
-    nrmsea = eval_loss / real_mean
+    # rrse_upper = np.sum(np.square(np.subtract(predictions, real)))
+    # rrse_lower = np.sum(np.square(np.subtract(np.full(predictions.size, real_mean), real)))
+    # rrse = rrse_upper / rrse_lower
+    #
+    # nrmsem = eval_loss / (np.amax(real) - np.amin(real))
+    # nrmsea = eval_loss / real_mean
 
     print("Loss: {}".format(eval_loss))
     print("Real mean: {}".format(real_mean))
-    print("RRSE: {}%".format(rrse * 100))
-    print("NRMSEM: {}%".format(nrmsem * 100))
-    print("NRMSEA: {}%".format(nrmsea * 100))
+    # print("RRSE: {}%".format(rrse * 100))
+    # print("NRMSEM: {}%".format(nrmsem * 100))
+    # print("NRMSEA: {}%".format(nrmsea * 100))
 
 
 if __name__ == "__main__":
@@ -193,12 +199,12 @@ if __name__ == "__main__":
 
     print(encdecmodel.summary())
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00045, plot_yscale='linear', load_weights_path=None, intermediates=1)
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
 
-    # encdecmodel.load_weights(filepath="as2s1dc-l0.00045-ss96-tl0.340-vl0.506-i192-o96-e50-seq2seq.h5")
+    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00045-ss96-tl0.296-vl0.316-i192-o96-e500-seq2seq.h5")
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_testing_sample()  # generate_validation_sample()
 
     # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 
