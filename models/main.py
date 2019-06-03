@@ -5,7 +5,7 @@ from metrics import mean_error
 from utils import load_data
 
 buildings = 15
-batch_size = 512
+batch_size = 128
 
 # Define the amount of features in the input and the output
 input_feature_amount = 84  # 84 without static indicators, 151 with.

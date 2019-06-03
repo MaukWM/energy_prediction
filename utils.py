@@ -8,7 +8,7 @@ def load_data(pkl_path=None):
         input_data = open(pkl_path, "rb")
         return pickle.load(input_data)
     start_dir = "../.."
-    pkl_data = "input_data-f84-0206.pkl"
+    pkl_data = "input_data.pkl"
     for root, dirs, files in os.walk(start_dir):
         if pkl_data in files:
             input_data = open(os.path.join(root, pkl_data), "rb")
