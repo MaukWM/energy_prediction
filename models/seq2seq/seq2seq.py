@@ -2,7 +2,7 @@ import keras as ks
 from keras.layers import GaussianNoise
 
 
-def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size, use_noise=False):
+def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size, use_noise=True):
     """
     Function to build the seq2seq model used.
     :return: Encoder model, decoder model (used for predicting) and full model (used for training).
