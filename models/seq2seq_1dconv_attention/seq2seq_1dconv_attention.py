@@ -1,5 +1,4 @@
-from keras.layers import GaussianNoise
-from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, Conv1D
+from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, Conv1D, GaussianNoise
 from tensorflow.python.keras.models import Model
 
 from layers.attention import AttentionLayer
@@ -63,16 +62,10 @@ def build_seq2seq_1dconv_attention_model(input_feature_amount, output_feature_am
     # Define the separate encoder model for inferencing
     decoder_inf_inputs = Input(shape=(1, output_feature_amount), name="decoder_inputs")
 
-    # Add noise
-    if use_noise:
-        decoder_inf_inputs_t = GaussianNoise(0.2)(decoder_inf_inputs)
-    else:
-        decoder_inf_inputs_t = decoder_inf_inputs
-
     encoder_inf_states = Input(shape=(20, state_size), name="decoder_inf_states")  # TODO: Unhardcode the 20, get output shape of last conv layer!
     decoder_init_state = Input(shape=(state_size,), name="decoder_init")
 
-    decoder_inf_out, decoder_inf_state = decoder_gru(decoder_inf_inputs_t, initial_state=decoder_init_state)
+    decoder_inf_out, decoder_inf_state = decoder_gru(decoder_inf_inputs, initial_state=decoder_init_state)
     attn_inf_out, attn_inf_states = attn_layer([encoder_inf_states, decoder_inf_out])
     decoder_inf_concat = Concatenate(axis=-1, name='concat')([decoder_inf_out, attn_inf_out])
     decoder_inf_pred = TimeDistributed(dense)(decoder_inf_concat)
