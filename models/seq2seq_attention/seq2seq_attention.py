@@ -1,10 +1,11 @@
+from keras.layers import GaussianNoise
 from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed
 from tensorflow.python.keras.models import Model
 
 from layers.attention import AttentionLayer
 
 
-def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, state_size, seq_len_in, seq_len_out):
+def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, state_size, seq_len_in, seq_len_out, use_noise=False):
     """
     Function to build the seq2seq model used.
     :return: Encoder model, decoder model (used for predicting) and full model (used for training).
@@ -12,6 +13,12 @@ def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, s
     # Define model inputs for the encoder/decoder stack
     x_enc = Input(shape=(seq_len_in, input_feature_amount), name="x_enc")
     x_dec = Input(shape=(seq_len_out, output_feature_amount), name="x_dec")
+
+    # Add noise
+    if use_noise:
+        x_dec_t = GaussianNoise(0.2)(x_dec)
+    else:
+        x_dec_t = x_dec
 
     # Define the encoder GRU, which only has to return a state
     encoder_gru = GRU(state_size, return_sequences=True, return_state=True, name="encoder_gru")
@@ -21,7 +28,7 @@ def build_seq2seq_attention_model(input_feature_amount, output_feature_amount, s
     decoder_gru = GRU(state_size, return_state=True, return_sequences=True,
                                 name="decoder_gru")
     # Use these definitions to calculate the outputs of out encoder/decoder stack
-    dec_intermediates, decoder_state = decoder_gru(x_dec, initial_state=encoder_state)
+    dec_intermediates, decoder_state = decoder_gru(x_dec_t, initial_state=encoder_state)
 
     # Define the attention layer
     attn_layer = AttentionLayer(name="attention_layer")

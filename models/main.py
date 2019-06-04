@@ -25,11 +25,9 @@ normalized_input_data, output_data = load_data("/home/mauk/Workspace/energy_pred
 validation_metrics = [mean_error
            # mean_absolute_percentage_error
            # ks.losses.mean_absolute_error
-           ]
+                      ]
 
 # print(normalized_input_data[0][0])
-
-# TODO: reprepare data for missing building 2818
 
 
 def generate_validation_data():
@@ -41,13 +39,27 @@ def generate_validation_data():
     test_xd_batches = []
     test_y_batches = []
 
-    # TODO: Doesn't this take training + testing??? fix pls
-    test_x, test_y = normalized_input_data, output_data # normalized_input_data[:, normalized_input_data.shape[1]//4], output_data[:, output_data.shape[1]//4]
+    # # TODO: Doesn't this take training + testing??? fix pls
+    # test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1] // 4], output_data[:, output_data.shape[1] // 4]
 
-    for i in range(len(normalized_input_data)):
-        for j in range(len(normalized_input_data[i]) - seq_len_out - seq_len_in):
+    # Split into testing set
+    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
+        # TODO: Check if this needs minus
+        test_x, test_y = normalized_input_data[:, -normalized_input_data.shape[1] // 4:], output_data[:,
+                                                                                          -output_data.shape[1] // 4:]
+    else:
+        test_x = []
+        test_y = []
+        for building in normalized_input_data:
+            test_x.append(building[-int(np.shape(building)[0] * 0.25):])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in output_data:
+            test_y.append(building[-int(np.shape(building)[0] * 0.25):])
+
+    for i in range(len(test_x)):
+        for j in range(len(test_x[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
             if j % 1500 == 0:
+                zz = test_x[i][j:j+seq_len_in]
                 test_xe_batches.append(test_x[i][j:j+seq_len_in])
                 test_xd_batches.append(test_y[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
                 test_y_batches.append(test_y[i][j + seq_len_in:j + seq_len_in + seq_len_out])
@@ -55,10 +67,6 @@ def generate_validation_data():
     test_xe_batches = np.stack(test_xe_batches, axis=0)
     test_xd_batches = np.stack(test_xd_batches, axis=0)
     test_y_batches = np.stack(test_y_batches, axis=0)
-
-    # print("xe", np.shape(test_xe_batches))
-    # print("xd", np.shape(test_xd_batches))
-    # print("y", np.shape(test_y_batches))
 
     return [test_xe_batches, test_xd_batches], test_y_batches
 
@@ -234,6 +242,7 @@ def generate_testing_sample():
     batch_xe = np.stack(batch_xe)
     batch_xd = np.stack(batch_xd)
     batch_y = np.stack(batch_y)
+
     return [batch_xe, batch_xd], batch_y, batch_y_prev
 
 #TODO: WHEN TESTING CURRENT TRAINING BATCH RE-PREPARE THE DATA TO NOT INCLUDE HOUR OF THE DAY!!!!

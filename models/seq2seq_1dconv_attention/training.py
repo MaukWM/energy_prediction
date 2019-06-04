@@ -199,12 +199,12 @@ if __name__ == "__main__":
 
     print(encdecmodel.summary())
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
+    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
 
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00045-ss96-tl0.296-vl0.316-i192-o96-e500-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00075-ss128-tl0.337-vl0.343-i96-o96-e500-seq2seq.h5")
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_testing_sample()  # generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
     # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 

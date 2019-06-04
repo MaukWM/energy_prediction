@@ -1,7 +1,8 @@
 import keras as ks
+from keras.layers import GaussianNoise
 
 
-def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, state_size, seq_len_in):
+def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, state_size, seq_len_in, use_noise=False):
     """
     Function to build the seq2seq model used.
     :return: Encoder model, decoder model (used for predicting) and full model (used for training).
@@ -9,6 +10,12 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     # Define model inputs for the encoder/decoder stack
     x_enc = ks.Input(shape=(seq_len_in, input_feature_amount), name="x_enc")
     x_dec = ks.Input(shape=(None, output_feature_amount), name="x_dec")
+
+    # Add noise
+    if use_noise:
+        x_dec_t = GaussianNoise(0.2)(x_dec)
+    else:
+        x_dec_t = x_dec
 
     input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')(x_enc)
     input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')(input_conv2)
@@ -24,7 +31,7 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     dec_dense = ks.layers.TimeDistributed(ks.layers.Dense(output_feature_amount, activation='linear'))
 
     # Use these definitions to calculate the outputs of out encoder/decoder stack
-    dec_intermediates, _ = dec_gru(x_dec, initial_state=state)
+    dec_intermediates, _ = dec_gru(x_dec_t, initial_state=state)
     # dec_intermediates = dec_dense2(dec_intermediates)
     dec_outs = dec_dense(dec_intermediates)
 
@@ -38,7 +45,7 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
     state_in = ks.Input(shape=(state_size,), name="state")
 
     # Use the previously defined layers to calculate the new output value and state for the prediction model as well
-    dec_intermediate, new_state = dec_gru(x_dec, initial_state=state_in)
+    dec_intermediate, new_state = dec_gru(x_dec_t, initial_state=state_in)
     # dec_intermediate = dec_dense2(dec_intermediate)
     dec_out = dec_dense(dec_intermediate)
 
