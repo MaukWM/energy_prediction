@@ -5,22 +5,24 @@ from metrics import mean_error
 from utils import load_data
 
 buildings = 15
-batch_size = 128
+batch_size = 256
 
 # Define the amount of features in the input and the output
-input_feature_amount = 84  # 84 without static indicators, 151 with.
+input_feature_amount = 83  # 84 without static indicators, 151 with.
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 128
+state_size = 96
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96
+seq_len_in = 96 * 7
 seq_len_out = 96
 
-plot_last_time_steps_view = 96 * 2
+# TODO: Try out regularization
 
-normalized_input_data, output_data = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f84-0306.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
+plot_last_time_steps_view = 96 * 3
+
+normalized_input_data, output_data = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/input_data_f83.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
 
 validation_metrics = [mean_error
            # mean_absolute_percentage_error
@@ -164,7 +166,7 @@ def generate_validation_sample():
     # Split into testing set
     if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
         #TODO: Check if this needs minus
-        test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1]//4:], output_data[:, output_data.shape[1]//4:]
+        test_x, test_y = normalized_input_data[:, -normalized_input_data.shape[1]//4:], output_data[:, -output_data.shape[1]//4:]
     else:
         test_x = []
         test_y = []

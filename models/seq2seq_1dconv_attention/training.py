@@ -1,7 +1,6 @@
 import numpy as np
 import keras as ks
 import matplotlib.pyplot as plt
-from keras.losses import mean_absolute_percentage_error
 from tensorflow.python.keras.optimizers import Adam
 
 import metrics
@@ -88,9 +87,10 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
     if load_weights_path:
         encdecmodel.load_weights(load_weights_path)
 
+    encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
+
     for i in range(intermediates):
         try:
-            encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)
@@ -199,12 +199,12 @@ if __name__ == "__main__":
 
     print(encdecmodel.summary())
 
-    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=100)
 
-    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00075-ss128-tl0.337-vl0.343-i96-o96-e500-seq2seq.h5")
+    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00045-ss96-tl0.155-vl0.421-i192-o96-e1500-seq2seq.h5")
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_testing_sample()
 
     # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 

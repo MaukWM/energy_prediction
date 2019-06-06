@@ -78,9 +78,10 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
     if load_weights_path:
         encdecmodel.load_weights(load_weights_path)
 
+    encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
+
     for i in range(intermediates):
         try:
-            encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)

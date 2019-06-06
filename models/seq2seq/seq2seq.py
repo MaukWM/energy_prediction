@@ -18,7 +18,7 @@ def build_seq2seq_model(input_feature_amount, output_feature_amount, state_size,
         x_dec_t = x_dec
 
     # Define the encoder GRU, which only has to return a state
-    _, state = ks.layers.GRU(state_size, return_state=True)(x_enc)  # (input_conv)
+    _, state = ks.layers.GRU(state_size, return_state=True)(x_enc)
 
     # Define the decoder GRU and the Dense layer that will transform sequences of size 20 vectors to
     # a sequence of 1-long vectors of final predicted values

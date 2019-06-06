@@ -175,7 +175,7 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data=None, pa
     # Change datetime to month, day of the week and hour of the day
     merged_df['month'] = merged_df.index.month
     merged_df['weekday'] = merged_df.index.weekday
-    merged_df['hour'] = merged_df.index.hour
+    merged_df['hour'] = merged_df.index.hour  # TODO: https://ianlondon.github.io/blog/encoding-cyclical-features-24hour-time/ make it cyclic and https://www.reddit.com/r/MachineLearning/comments/1utxnk/how_do_you_represent_timeofday_in_artificial/
 
     # Drop local_15min as we don't need it anymore
     merged_df = merged_df.reset_index()
