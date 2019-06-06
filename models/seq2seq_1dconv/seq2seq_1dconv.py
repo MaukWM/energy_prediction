@@ -19,7 +19,7 @@ def build_seq2seq_1dconv_model(input_feature_amount, output_feature_amount, stat
 
     input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')(x_enc)
     input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')(input_conv2)
-    input_conv = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', as2s1dc-l0.00065-ss128-tl0.372-vl0.411-i96-o96-e1500-seq2seq)(input_conv1)
+    input_conv = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu')(input_conv1)
 
     # Define the encoder GRU, which only has to return a state
     _, state = ks.layers.GRU(state_size, return_state=True)(input_conv)

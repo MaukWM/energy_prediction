@@ -15,7 +15,7 @@ output_feature_amount = 1
 state_size = 96
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 7
+seq_len_in = 96 * 2
 seq_len_out = 96
 
 # TODO: Try out regularization
@@ -32,7 +32,7 @@ validation_metrics = [mean_error
 # print(normalized_input_data[0][0])
 
 
-def generate_validation_data():
+def generate_validation_data(slice_point=1500):
     """
     Generate validation data of the whole testing set.
     :return: the validation data
@@ -60,8 +60,7 @@ def generate_validation_data():
     for i in range(len(test_x)):
         for j in range(len(test_x[i]) - seq_len_out - seq_len_in):
             #  Change modulo operation to change interval
-            if j % 1500 == 0:
-                zz = test_x[i][j:j+seq_len_in]
+            if j % slice_point == 0:
                 test_xe_batches.append(test_x[i][j:j+seq_len_in])
                 test_xd_batches.append(test_y[i][j+seq_len_in - 1:j+seq_len_in+seq_len_out - 1])
                 test_y_batches.append(test_y[i][j + seq_len_in:j + seq_len_in + seq_len_out])

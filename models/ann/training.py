@@ -149,6 +149,6 @@ if __name__ == "__main__":
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
+    calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, ann_model)
 
     predict(ann_model, predict_x_batches, predict_y_batches, predict_y_batches_prev)

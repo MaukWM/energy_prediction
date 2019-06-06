@@ -90,20 +90,13 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
     encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
 
     for i in range(intermediates):
+        history = None
         try:
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
             histories.append(history)
         except KeyboardInterrupt:
             print("Training interrupted!")
-
-        # If given, plot the loss
-        if plot_loss and history:
-            plt.plot(history.history['loss'], label="loss")
-            plt.plot(history.history['val_loss'], label="val_loss")
-            plt.yscale(plot_yscale)
-            plt.legend()
-            plt.show()
 
         # Save weights
         if save_weights:
@@ -118,6 +111,14 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
                                                                                         seq_len_in,
                                                                                         seq_len_out,
                                                                                         epochs*intermediates))
+
+        # If given, plot the loss
+        if plot_loss and history:
+            plt.plot(history.history['loss'], label="loss")
+            plt.plot(history.history['val_loss'], label="val_loss")
+            plt.yscale(plot_yscale)
+            plt.legend()
+            plt.show()
 
     # Return the history of the training session
     return histories
@@ -189,7 +190,7 @@ def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_p
 
 
 if __name__ == "__main__":
-    test_x_batches, test_y_batches = generate_validation_data()
+    test_x_batches, test_y_batches = generate_validation_data(slice_point=6500)
 
     # Build the model
     encoder, decoder, encdecmodel = build_seq2seq_1dconv_attention_model(input_feature_amount=input_feature_amount,
@@ -200,7 +201,7 @@ if __name__ == "__main__":
     print(encdecmodel.summary())
 
     train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=100)
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=1)
 
     # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00045-ss96-tl0.155-vl0.421-i192-o96-e1500-seq2seq.h5")
 

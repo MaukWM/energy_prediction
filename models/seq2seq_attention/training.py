@@ -152,13 +152,13 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
         plt.legend()
         plt.show()
 
-    plot_attention_weights(attention_weights)
+        plot_attention_weights(attention_weights)
 
     return predictions
 
 
 def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
-    encdecmodel.compile(ks.optimizers.Adam(1), metrics.root_mean_squared_error)
+    encdecmodel.compile(Adam(1), metrics.root_mean_squared_error)
 
     eval_loss = encdecmodel.evaluate(predict_x_batches, predict_y_batches,
                                      batch_size=1, verbose=1)
@@ -173,14 +173,17 @@ def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_p
     rrse_lower = np.sum(np.square(np.subtract(np.full(predictions.size, real_mean), real)))
     rrse = rrse_upper / rrse_lower
 
+    # https://en.wikipedia.org/wiki/Root-mean-square_deviation
+    # Calcluted with the min and max
     nrmsem = eval_loss / (np.amax(real) - np.amin(real))
+    # Calculated with the mean
     nrmsea = eval_loss / real_mean
 
     print("Loss: {}".format(eval_loss))
     print("Real mean: {}".format(real_mean))
-    print("RRSE: {}%".format(rrse * 100))
-    print("NRMSEM: {}%".format(nrmsem * 100))
-    print("NRMSEA: {}%".format(nrmsea * 100))
+    print("Root relative squared error: {0:.2f}%".format(rrse * 100)) # https://stats.stackexchange.com/questions/172382/standard-performance-measure-for-regression
+    print("Normalized root-mean-square deviation (max-min): {0:.2f}%".format(nrmsem * 100))
+    print("Normalized root-mean-square deviation (mean): {0:.2f}%".format(nrmsea * 100))
 
 
 if __name__ == "__main__":
@@ -197,11 +200,11 @@ if __name__ == "__main__":
     # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
     #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
 
-    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00045-ss96-tl0.159-vl0.411-i192-o96-e1500-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00045-ss96-tl0.289-vl0.384-i192-o96-e1500-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
+    calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 
     predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 

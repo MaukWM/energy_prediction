@@ -12,7 +12,7 @@ year = day * 365
 def visualize_day_data(path_to_data):
     df = pd.read_csv(path_to_data)
     sp = random.randint(0, len(df.index) - 1000)  # Add arbitrary large number so it doesn't break
-    df = df[sp:sp+month]
+    df = df[sp:sp+day]
 
     df = df.loc[:, (df != 0).any(axis=0)]
 
