@@ -17,7 +17,7 @@ days_in_week = 7
 months_in_year = 12
 
 # Aggregation_kernel_size
-aggregation_kernel_size = 10
+aggregation_kernel_size = 30
 
 # When changing this also change in data_cleaning.py
 column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
@@ -165,7 +165,7 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data=None, pa
     return merged_df
 
 
-def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_data, output_folder, cleaned_dfs=None):
+def prepare_data(path_to_energy_data_folder, path_to_weather_data, output_folder, cleaned_dfs=None):
     """
     Function to prepare all the data, assuming it has already been cleaned.
     :param path_to_energy_data_folder: Path to folder containing energy data over time
@@ -222,7 +222,6 @@ def normalize_data(path_to_data):
     # Loop over prepared data, collecting it into numpy arrays.
     for filename in os.listdir(path_to_data):
         if ".csv" in filename:
-            print("Processing", filename)
             data = np.genfromtxt(os.path.join(path_to_data, filename), delimiter=',', dtype=np.float32)
 
             # Delete the first row (names of the columns)
@@ -312,12 +311,12 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/aggre
 
 
 def the_whole_shibang():
-    # cleaned_dfs = data_cleaning.time_clean_building_energy(input_folder="data/raw/building_energy/1415",
-    #                                                        output_folder="data/cleaned/building_energy/1415",
-    #                                                        start_section='1/1/2014',
-    #                                                        end_section='31/12/2015')
-    prepare_data("data/cleaned/building_energy/1415/", "data/cleaned/metadata/tc-buildings_metadata.csv",
-                 "data/weather1415.csv", "data/prepared/aggregated_1415")
+    cleaned_dfs = data_cleaning.time_clean_building_energy(input_folder="data/raw/building_energy/1415/",
+                                                           output_folder="data/cleaned/building_energy/1415/",
+                                                           start_section='1/1/2014',
+                                                           end_section='31/12/2015')
+    prepare_data("data/cleaned/building_energy/1415/",
+                 "data/weather1415.csv", "data/prepared/aggregated_1415/", cleaned_dfs=cleaned_dfs)
     normalize_and_pickle_prepared_data()
 
 

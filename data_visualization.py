@@ -64,4 +64,4 @@ def visualize_column_from_multiple(path_to_data_folder, column_name, size_data):
 
 
 visualize_column_from_multiple("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/", "use", size_data=size_data)
-# visualize_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-0.csv")
+visualize_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-0.csv")

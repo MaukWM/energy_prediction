@@ -23,7 +23,7 @@ plot_last_time_steps_view = 96 * 3
 
 test_train_ratio = 0.5
 
-data_dict = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak10-b15.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
+data_dict = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak10-b35.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
 normalized_input_data = data_dict['normalized_input_data']
 normalized_output_data = data_dict['normalized_output_data']
 output_std = data_dict['output_std']
