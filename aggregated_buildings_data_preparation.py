@@ -17,7 +17,7 @@ days_in_week = 7
 months_in_year = 12
 
 # Aggregation_kernel_size
-aggregation_kernel_size = 14
+aggregation_kernel_size = 10
 
 # When changing this also change in data_cleaning.py
 column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
@@ -188,7 +188,7 @@ def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_d
 
     total = len(cleaned_dfs) - aggregation_kernel_size
 
-    for i in range(total):
+    for i in range(total + 1):
         print("Preparing cleaned aggregated dataset {} of {}".format(i, total))
 
         # This can easily be optimized but I choose to do it this way to change things more easily
@@ -201,10 +201,9 @@ def prepare_data(path_to_energy_data_folder, path_to_metadata, path_to_weather_d
             # Set index if it isn't yet
             if 'local_15min' in aggregated_df:
                 aggregated_df = aggregated_df.set_index('local_15min')
-            energy_df = energy_df.set_index('local_15min')
+            if 'local_15min' in energy_df:
+                energy_df = energy_df.set_index('local_15min')
             aggregated_df = aggregated_df.add(energy_df)
-
-        # print(aggregated_df)
 
         prepared_df = merge_energy_data_with_weather_data(aggregated_df, path_to_weather_data)
 
@@ -256,9 +255,6 @@ def normalize_data(path_to_data):
         collected_data_mean = np.mean(concatenated_collected_data, axis=0)
         collected_data_std = np.std(concatenated_collected_data, axis=0)
 
-        # print("collected_data_mean", collected_data_mean)
-        # print("collected_data_std", collected_data_std)
-
     # Loop over calculated mean and std. Change the std to 1 if the column in the data was fully static, since if the
     # column is static it must be either 1 or 0. And dividing by 0 is of course not allowed.
     for i in range(len(collected_data_std)):
@@ -299,14 +295,14 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/aggre
         pickle_file = open(os.path.join(pickle_output_path, "aggregated_input_data-f{}-ak{}-b{}.pkl".format(
             normalized_collected_input_data.shape[2],
             aggregation_kernel_size,
-            normalized_collected_input_data.shape[0] + aggregation_kernel_size
+            normalized_collected_input_data.shape[0] + aggregation_kernel_size - 1
         )), "wb")
     else:
         print(normalized_collected_input_data.shape)
         pickle_file = open(os.path.join(prepared_data_folder, "aggregated_input_data-f{}-ak{}-b{}.pkl".format(
             normalized_collected_input_data.shape[2],
             aggregation_kernel_size,
-            normalized_collected_input_data.shape[0] + aggregation_kernel_size
+            normalized_collected_input_data.shape[0] + aggregation_kernel_size - 1
         )), "wb")
     pickle.dump(({"normalized_input_data": normalized_collected_input_data,
                   "normalized_output_data": normalized_output_data,
@@ -317,7 +313,7 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/aggre
 
 def the_whole_shibang():
     # cleaned_dfs = data_cleaning.time_clean_building_energy(input_folder="data/raw/building_energy/1415",
-    #                                                        output_folder="data/cleaned/building_energy/",
+    #                                                        output_folder="data/cleaned/building_energy/1415",
     #                                                        start_section='1/1/2014',
     #                                                        end_section='31/12/2015')
     prepare_data("data/cleaned/building_energy/1415/", "data/cleaned/metadata/tc-buildings_metadata.csv",

@@ -252,7 +252,7 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
             if start_section and end_section:
                 cleaned_df = clean_data_on_time_range(file=os.path.join(input_folder, filename),
                                                       t_colname="local_15min", start=start_section, end=end_section,
-                                                      freq="15T")
+                                                      freq="15T", output_folder=output_folder)
             else:
                 cleaned_df = clean_data_with_threshold_missing(path_to_file=os.path.join(input_folder, filename), t_colname="local_15min",
                                                                tdelta="15T", output_folder=output_folder)

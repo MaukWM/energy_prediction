@@ -178,8 +178,8 @@ if __name__ == "__main__":
                                                         output_feature_amount=output_feature_amount,
                                                         state_size=state_size)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
+    train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=20, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=15)
 
     # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
 
