@@ -11,6 +11,11 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.max_rows', 500000)
 pd.set_option('display.width', 10000000)
 
+# Define amount in time for creating proper features for time
+hours_in_day = 24
+days_in_week = 7
+months_in_year = 12
+
 # When changing this also change in data_cleaning.py
 column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
 
@@ -172,10 +177,20 @@ def merge_energy_data_with_weather_data(energy_df, path_to_weather_data=None, pa
     # Merge the two dataframe, followed by all my other failed attempts
     merged_df = pd.concat([energy_df, weather_df], axis=1)
 
-    # Change datetime to month, day of the week and hour of the day
-    merged_df['month'] = merged_df.index.month
-    merged_df['weekday'] = merged_df.index.weekday
-    merged_df['hour'] = merged_df.index.hour  # TODO: https://ianlondon.github.io/blog/encoding-cyclical-features-24hour-time/ make it cyclic and https://www.reddit.com/r/MachineLearning/comments/1utxnk/how_do_you_represent_timeofday_in_artificial/
+    # # Change datetime to month, day of the week and hour of the day
+    # merged_df['month'] = merged_df.index.month
+    # merged_df['weekday'] = merged_df.index.weekday # TODO: In paper mention time is normalized like this https://medium.com/ai%C2%B3-theory-practice-business/top-6-errors-novice-machine-learning-engineers-make-e82273d394db http://blog.davidkaleko.com/feature-engineering-cyclical-features.html
+    # merged_df['hour'] = merged_df.index.hour  # TODO: https://ianlondon.github.io/blog/encoding-cyclical-features-24hour-time/ make it cyclic and https://www.reddit.com/r/MachineLearning/comments/1utxnk/how_do_you_represent_timeofday_in_artificial/
+
+    # Encode month, week and hour with sin and cos to make the data cyclical
+    merged_df['month_sin'] = np.sin(2 * np.pi * merged_df.index.month / months_in_year)
+    merged_df['month_cos'] = np.cos(2 * np.pi * merged_df.index.month / months_in_year)
+
+    merged_df['weekday_sin'] = np.sin(2 * np.pi * merged_df.index.weekday / days_in_week)
+    merged_df['weekday_cos'] = np.cos(2 * np.pi * merged_df.index.weekday / days_in_week)
+
+    merged_df['hour_sin'] = np.sin(2 * np.pi * merged_df.index.hour / hours_in_day)
+    merged_df['hour_cos'] = np.cos(2 * np.pi * merged_df.index.hour / hours_in_day)
 
     # Drop local_15min as we don't need it anymore
     merged_df = merged_df.reset_index()
@@ -288,6 +303,7 @@ def normalize_data(path_to_data):
             collected_data_std[i] = 1
             collected_data_mean[i] = 0
 
+    # TODO: Also normalize output and store relevant info
     # If all shapes were matching do numpy magic to return normalized data and data to predict
     if matching_shapes:
         return (collected_data - collected_data_mean) / collected_data_std, np.take(collected_data, indices=column_data_to_predict, axis=2)
@@ -318,13 +334,13 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/", pi
     if pickle_output_path:
         pickle_file = open(pickle_output_path, "wb")
     else:
-        pickle_file = open(os.path.join(prepared_data_folder, "input_data-f84-0306.pkl"), "wb")
+        pickle_file = open(os.path.join(prepared_data_folder, "input_data.pkl"), "wb")
     pickle.dump((normalized_collected_input_data, output_data), pickle_file)
     pickle_file.close()
 
 
 def the_whole_shibang():
-    cleaned_dfs = data_cleaning.time_clean_building_energy()
+    cleaned_dfs = data_cleaning.time_clean_building_energy(input_folder="data/raw/building_energy/1415", output_folder="data/cleaned/building_energy/")
     prepare_data("data/cleaned/building_energy/", "data/cleaned/metadata/tc-buildings_metadata.csv", "data/weather_all.csv", "data/prepared/", cleaned_dfs=cleaned_dfs)
     normalize_and_pickle_prepared_data()
 

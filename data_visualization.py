@@ -9,10 +9,10 @@ month = day * 30
 year = day * 365
 
 
-def visualize_day_data(path_to_data):
+def visualize_data(path_to_data):
     df = pd.read_csv(path_to_data)
     sp = random.randint(0, len(df.index) - 1000)  # Add arbitrary large number so it doesn't break
-    df = df[sp:sp+day]
+    df = df[sp:sp+week]
 
     df = df.loc[:, (df != 0).any(axis=0)]
 
@@ -26,5 +26,4 @@ def visualize_day_data(path_to_data):
             print("Warning, type error in " + column)
 
 
-
-visualize_day_data("/home/mauk/Workspace/energy_prediction/data/cleaned/building_energy/tc-3192-building_data-1415.csv")
+visualize_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-0.csv")

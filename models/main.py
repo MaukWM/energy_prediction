@@ -4,25 +4,32 @@ from keras.losses import mean_absolute_percentage_error
 from metrics import mean_error
 from utils import load_data
 
-buildings = 15
+timeseries = 10
 batch_size = 256
 
 # Define the amount of features in the input and the output
-input_feature_amount = 83  # 84 without static indicators, 151 with.
+input_feature_amount = 83  # 87 without static indicators, 154 with. If aggregated, 83
 output_feature_amount = 1
 
 # Define size of states used by GRU
 state_size = 96
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 2
+seq_len_in = 96 * 7
 seq_len_out = 96
 
 # TODO: Try out regularization
 
-plot_last_time_steps_view = 96 * 3
+plot_last_time_steps_view = 96 * 2
 
-normalized_input_data, output_data = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/input_data_f83.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
+test_train_ratio = 0.5
+
+data_dict = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-0206.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
+normalized_input_data = data_dict['normalized_input_data']
+normalized_output_data = data_dict['normalized_output_data']
+output_std = data_dict['output_std']
+output_mean = data_dict['output_mean']
+
 
 validation_metrics = [mean_error
            # mean_absolute_percentage_error
@@ -41,21 +48,17 @@ def generate_validation_data(slice_point=1500):
     test_xd_batches = []
     test_y_batches = []
 
-    # # TODO: Doesn't this take training + testing??? fix pls
-    # test_x, test_y = normalized_input_data[:, normalized_input_data.shape[1] // 4], output_data[:, output_data.shape[1] // 4]
-
     # Split into testing set
-    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
-        # TODO: Check if this needs minus
-        test_x, test_y = normalized_input_data[:, -normalized_input_data.shape[1] // 4:], output_data[:,
-                                                                                          -output_data.shape[1] // 4:]
+    if hasattr(normalized_input_data, 'shape') and hasattr(normalized_output_data, 'shape'):
+        test_x, test_y = normalized_input_data[:, -normalized_input_data.shape[1] // int((1 / test_train_ratio)):], \
+                         normalized_output_data[:, -normalized_output_data.shape[1] // int((1 / test_train_ratio)):]
     else:
         test_x = []
         test_y = []
         for building in normalized_input_data:
-            test_x.append(building[-int(np.shape(building)[0] * 0.25):])  # Ratio, TODO: Unhardcode, add variable up top
-        for building in output_data:
-            test_y.append(building[-int(np.shape(building)[0] * 0.25):])
+            test_x.append(building[-int(np.shape(building)[0] * test_train_ratio):])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in normalized_output_data:
+            test_y.append(building[-int(np.shape(building)[0] * test_train_ratio):])
 
     for i in range(len(test_x)):
         for j in range(len(test_x[i]) - seq_len_out - seq_len_in):
@@ -78,15 +81,15 @@ def generate_batches():
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Split into training set
-    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
-        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//4], output_data[:, :output_data.shape[1]//4]
+    if hasattr(normalized_input_data, 'shape') and hasattr(normalized_output_data, 'shape'):
+        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//int((1 / test_train_ratio))], normalized_output_data[:, :normalized_output_data.shape[1] // int((1 / test_train_ratio))]
     else:
         train_x = []
         train_y = []
         for building in normalized_input_data:
-            train_x.append(building[:int(len(building) * 0.75)])  # Ratio, TODO: Unhardcode, add variable up top
-        for building in output_data:
-            train_y.append(building[:int(len(building) * 0.75)])
+            train_x.append(building[:int(len(building) * (1 - test_train_ratio))])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in normalized_output_data:
+            train_y.append(building[:int(len(building) * (1 - test_train_ratio))])
 
     while True:
         # Batch input for encoder
@@ -98,7 +101,7 @@ def generate_batches():
 
         for i in range(batch_size):
             # Select a random building from the training set
-            bd = np.random.randint(0, buildings)
+            bd = np.random.randint(0, timeseries)
 
             # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
             sp = np.random.randint(0, len(train_x[bd]) - seq_len_in - seq_len_out)
@@ -121,15 +124,15 @@ def generate_batch():
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Split into training set
-    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
-        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//4], output_data[:, :output_data.shape[1]//4]
+    if hasattr(normalized_input_data, 'shape') and hasattr(normalized_output_data, 'shape'):
+        train_x, train_y = normalized_input_data[:, :normalized_input_data.shape[1]//int((1 / test_train_ratio))], normalized_output_data[:, :normalized_output_data.shape[1] // int((1 / test_train_ratio))]
     else:
         train_x = []
         train_y = []
         for building in normalized_input_data:
-            train_x.append(building[:int(len(building) * 0.75)])  # Ratio, TODO: Unhardcode, add variable up top
-        for building in output_data:
-            train_y.append(building[:int(len(building) * 0.75)])
+            train_x.append(building[:int(len(building) * (1 - test_train_ratio))])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in normalized_output_data:
+            train_y.append(building[:int(len(building) * (1 - test_train_ratio))])
 
     # Batch input for encoder
     batch_xe = []
@@ -140,7 +143,7 @@ def generate_batch():
 
     for i in range(batch_size):
         # Select a random building from the training set
-        bd = np.random.randint(0, buildings)
+        bd = np.random.randint(0, timeseries)
 
         # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
         sp = np.random.randint(0, len(train_x[bd]) - seq_len_in - seq_len_out)
@@ -163,16 +166,16 @@ def generate_validation_sample():
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Split into testing set
-    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
+    if hasattr(normalized_input_data, 'shape') and hasattr(normalized_output_data, 'shape'):
         #TODO: Check if this needs minus
-        test_x, test_y = normalized_input_data[:, -normalized_input_data.shape[1]//4:], output_data[:, -output_data.shape[1]//4:]
+        test_x, test_y = normalized_input_data[:, -normalized_input_data.shape[1]//int((1 / test_train_ratio)):], normalized_output_data[:, -normalized_output_data.shape[1] // int((1 / test_train_ratio)):]
     else:
         test_x = []
         test_y = []
         for building in normalized_input_data:
-            test_x.append(building[-int(len(building) * 0.25):])  # Ratio, TODO: Unhardcode, add variable up top
-        for building in output_data:
-            test_y.append(building[-int(len(building) * 0.25):])
+            test_x.append(building[-int(len(building) * test_train_ratio):])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in normalized_output_data:
+            test_y.append(building[-int(len(building) * test_train_ratio):])
 
     # Batch input for encoder
     batch_xe = []
@@ -208,15 +211,15 @@ def generate_testing_sample():
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Split into training set
-    if hasattr(normalized_input_data, 'shape') and hasattr(output_data, 'shape'):
-        test_x, test_y = normalized_input_data[:, :normalized_input_data.shape[1]//4], output_data[:, :output_data.shape[1]//4]
+    if hasattr(normalized_input_data, 'shape') and hasattr(normalized_output_data, 'shape'):
+        test_x, test_y = normalized_input_data[:, :normalized_input_data.shape[1]//int((1 / test_train_ratio))], normalized_output_data[:, :normalized_output_data.shape[1] // int((1 / test_train_ratio))]
     else:
         test_x = []
         test_y = []
         for building in normalized_input_data:
-            test_x.append(building[-int(len(building) * 0.25):])  # Ratio, TODO: Unhardcode, add variable up top
-        for building in output_data:
-            test_y.append(building[-int(len(building) * 0.25):])
+            test_x.append(building[-int(len(building) * test_train_ratio):])  # Ratio, TODO: Unhardcode, add variable up top
+        for building in normalized_output_data:
+            test_y.append(building[-int(len(building) * test_train_ratio):])
 
     # Batch input for encoder
     batch_xe = []

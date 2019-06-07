@@ -8,7 +8,8 @@ from tensorflow.python.keras.optimizers import Adam
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount, generate_validation_sample, validation_metrics
+    state_size, input_feature_amount, output_feature_amount, generate_validation_sample, validation_metrics, \
+    output_mean, output_std
 
 # Define some variables for generating batches
 from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_model
@@ -28,7 +29,7 @@ from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_m
 # seq_len_out = 96
 #
 # plot_last_time_steps_view = 96 * 2
-from utils import plot_attention_weights
+from utils import plot_attention_weights, denormalize
 
 
 def make_attention_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
@@ -92,6 +93,8 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
 
+    history = None
+
     for i in range(intermediates):
         try:
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
@@ -99,14 +102,6 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
             histories.append(history)
         except KeyboardInterrupt:
             print("Training interrupted!")
-
-        # If given, plot the loss
-        if plot_loss and history:
-            plt.plot(history.history['loss'], label="loss")
-            plt.plot(history.history['val_loss'], label="val_loss")
-            plt.yscale(plot_yscale)
-            plt.legend()
-            plt.show()
 
         # Save weights
         if save_weights:
@@ -122,6 +117,14 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
                                                                                         seq_len_out,
                                                                                         epochs*intermediates))
 
+        # If given, plot the loss
+        if plot_loss and history:
+            plt.plot(history.history['loss'], label="loss")
+            plt.plot(history.history['val_loss'], label="val_loss")
+            plt.yscale(plot_yscale)
+            plt.legend()
+            plt.show()
+
     # Return the history of the training session
     return histories
 
@@ -136,15 +139,18 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     :param actual_output: The actual output (during decoding time)
     :param prev_output: The previous output (during encoding time)
     :param plot: Boolean to indicate if the prediction should be plotted
-    :return: Made predictions.
+    :return: Made normalized predictions.
     """
     # Make a prediction on the given data
-    predictions, attention_weights = make_attention_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
+    normalized_predictions, attention_weights = make_attention_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
                                             seq_len_out)
 
     if plot:
-        # Concat the ys so we get a smooth line for the ys
-        ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+        # Concat the normalized_ys so we get a smooth line for the normalized_ys
+        normalized_ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+
+        ys = denormalize(normalized_ys, output_std, output_mean)
+        predictions = denormalize(normalized_predictions, output_std, output_mean)
 
         # Plot them
         plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
@@ -154,7 +160,7 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
 
         plot_attention_weights(attention_weights)
 
-    return predictions
+    return normalized_predictions
 
 
 def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
@@ -197,14 +203,14 @@ if __name__ == "__main__":
 
     encdecmodel.summary()
 
-    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
+    # train(encdecmodel=encdecmodel, steps_per_epoch=15, epochs=20, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00095, plot_yscale='linear', load_weights_path=None, intermediates=1)
 
-    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00045-ss96-tl0.289-vl0.384-i192-o96-e1500-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00095-ss96-tl0.169-vl0.167-i192-o96-e20-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
+    # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 
     predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 

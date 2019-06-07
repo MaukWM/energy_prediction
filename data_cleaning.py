@@ -234,10 +234,13 @@ def clean_data_with_threshold_missing(path_to_file, t_colname, tdelta, output_fo
     return df
 
 
-def time_clean_building_energy(input_folder="data/raw/building_energy/", output_folder="data/cleaned/building_energy/"):
+def time_clean_building_energy(input_folder="data/raw/building_energy/", output_folder="data/cleaned/building_energy/",
+                               start_section=None, end_section=None):
     """
     Go through files in raw building energy folder and time clean them
     :param input_folder:
+    :param start_section: Moment in time to start
+    :param end_section: Moment in time to end
     """
     print("========= Performing time cleaning on " + input_folder + " =========")
     cleaned_dfs = []
@@ -246,14 +249,20 @@ def time_clean_building_energy(input_folder="data/raw/building_energy/", output_
             # Clean the dataframe
             print("Time cleaning", filename)
             # clean_data_on_time_range(file=os.path.join(input_folder, filename), t_colname="local_15min", start='1/1/2014', end='31/12/2015', freq="15T", output_folder=output_folder)
-            cleaned_df = clean_data_with_threshold_missing(path_to_file=os.path.join(input_folder, filename), t_colname="local_15min",
-                                              tdelta="15T", output_folder=output_folder)
+            if start_section and end_section:
+                cleaned_df = clean_data_on_time_range(file=os.path.join(input_folder, filename),
+                                                      t_colname="local_15min", start=start_section, end=end_section,
+                                                      freq="15T")
+            else:
+                cleaned_df = clean_data_with_threshold_missing(path_to_file=os.path.join(input_folder, filename), t_colname="local_15min",
+                                                               tdelta="15T", output_folder=output_folder)
+
             cleaned_dfs.append(cleaned_df)
 
     return cleaned_dfs
 
 
-def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", output_folder="data/cleaned/metadata/", write_file=True):
+def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", output_folder="data/cleaned/metadata/"):
     # Load in the data
     df = pd.read_csv(path_to_metadata)
 

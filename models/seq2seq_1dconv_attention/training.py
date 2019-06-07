@@ -89,8 +89,9 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     encdecmodel.compile(Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
 
+    history = None
+
     for i in range(intermediates):
-        history = None
         try:
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
                                                 validation_data=validation_data)
@@ -200,10 +201,10 @@ if __name__ == "__main__":
 
     print(encdecmodel.summary())
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=1)
+    # train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=50, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
 
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00045-ss96-tl0.155-vl0.421-i192-o96-e1500-seq2seq.h5")
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00075-ss96-tl0.179-vl1.360-i672-o96-e5000-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_testing_sample()
 

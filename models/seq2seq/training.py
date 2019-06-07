@@ -79,6 +79,8 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
 
     encdecmodel.compile(ks.optimizers.Adam(learning_rate), ks.losses.mean_squared_error, metrics=validation_metrics)
 
+    history = None
+
     for i in range(intermediates):
         try:
             history = encdecmodel.fit_generator(generate_batches(), steps_per_epoch=steps_per_epoch, epochs=epochs,
@@ -86,14 +88,6 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
             histories.append(history)
         except KeyboardInterrupt:
             print("Training interrupted!")
-
-        # If given, plot the loss
-        if plot_loss and history:
-            plt.plot(history.history['loss'], label="loss")
-            plt.plot(history.history['val_loss'], label="val_loss")
-            plt.yscale(plot_yscale)
-            plt.legend()
-            plt.show()
 
         # Save weights
         if save_weights:
@@ -108,6 +102,14 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
                                                                                         seq_len_in,
                                                                                         seq_len_out,
                                                                                         epochs*intermediates))
+
+        # If given, plot the loss
+        if plot_loss and history:
+            plt.plot(history.history['loss'], label="loss")
+            plt.plot(history.history['val_loss'], label="val_loss")
+            plt.yscale(plot_yscale)
+            plt.legend()
+            plt.show()
 
     # Return the history of the training session
     return histories
