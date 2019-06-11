@@ -20,7 +20,7 @@ def build_ann_model(input_feature_amount, output_feature_amount, seq_len_in, seq
 
     input_flat = Flatten()(input_sequence)
 
-    dense1 = ks.layers.Dense(2048, activation='relu')
+    dense1 = ks.layers.Dense(1024, activation='relu')
     dense1_out = dense1(input_flat)
 
     dense2 = ks.layers.Dense(256, activation='relu')

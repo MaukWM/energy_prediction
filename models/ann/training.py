@@ -6,7 +6,8 @@ from keras.losses import mean_absolute_percentage_error
 import metrics
 from models.ann.ann import build_ann_model
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount, validation_metrics, generate_validation_sample
+    state_size, input_feature_amount, output_feature_amount, validation_metrics, generate_validation_sample, output_std, \
+    output_mean, generate_training_sample
 from models.seq2seq.seq2seq import build_seq2seq_model
 
 # # Define some variables for generating batches
@@ -25,6 +26,7 @@ from models.seq2seq.seq2seq import build_seq2seq_model
 # seq_len_out = 96
 #
 # plot_last_time_steps_view = 96 * 2
+from utils import denormalize
 
 
 def make_prediction(model, input):
@@ -117,19 +119,23 @@ def predict(model, input, actual_output, prev_output, plot=True):
     :return: Made predictions.
     """
     # Make a prediction on the given data
-    predictions = make_prediction(model, input)
+    normalized_predictions = make_prediction(model, input)
 
     if plot:
         # Concat the ys so we get a smooth line for the ys
-        ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+        normalized_ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+
+        ys = denormalize(normalized_ys, output_std, output_mean)
+        predictions = denormalize(normalized_predictions, output_std, output_mean)
 
         # Plot them
         plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
         plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
         plt.legend()
+        plt.title(label="ann")
         plt.show()
 
-    return predictions
+    return normalized_predictions
 
 
 if __name__ == "__main__":
@@ -142,13 +148,13 @@ if __name__ == "__main__":
 
     print(ann_model.summary())
 
-    train(model=ann_model, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.002, plot_yscale='linear', load_weights_path=None, intermediates=100)
+    train(model=ann_model, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
 
-    # ann_model.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/ann/s2s-l0.00075-tl1.974-vl1.821-i96-o96-e250-seq2seq.h5")
+    # ann_model.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/ann/s2s-l0.002-tl0.096-vl5.729-i192-o96-e5000-seq2seq.h5")
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_training_sample()
 
-    calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, ann_model)
+    # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, ann_model)
 
     predict(ann_model, predict_x_batches, predict_y_batches, predict_y_batches_prev)

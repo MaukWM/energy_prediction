@@ -24,13 +24,17 @@ def print_difference_between_missing_data(file, tdelta, t_colname, tformat=None)
     :param tformat: format to parse the timestamp from t_colname
     """
     #  See https://stackabuse.com/how-to-format-dates-in-python/ for good explanation on datetime formatting
-    dataset = pd.read_csv(file)
+    df = pd.read_csv(file)
+
+    # Remove all rows that contain a NaN value for the predicting column
+    df = df[df[column_data_to_predict_name].notnull()]
+
     if not tformat:
-        tformat = find_format(dataset.iloc[0][t_colname])
-    for index, row in dataset.iterrows():
-        if index == 0:
-            prev_time = row[t_colname]
-            continue
+        tformat = find_format(df.iloc[0][t_colname])
+
+    prev_time = df.iloc[0][t_colname]
+
+    for index, row in df.iterrows():
         diff = datetime.strptime(row[t_colname], tformat) - datetime.strptime(prev_time, tformat)
         if diff.total_seconds() == tdelta:
             prev_time = row[t_colname]
@@ -52,13 +56,19 @@ def calculate_percentage_missing_data(file, tdelta, t_colname, tformat=None):
     #  See https://stackabuse.com/how-to-format-dates-in-python/ for good explanation on datetime formatting
     correct = 0
     incorrect = 0
-    dataset = pd.read_csv(file)
+    df = pd.read_csv(file)
+
+    # Remove all rows that contain a NaN value for the predicting column
+    col_df = df[column_data_to_predict_name]
+    print(col_df.isna().sum())
+    df = df[(df[column_data_to_predict_name].notnull())]
+
     if not tformat:
-        tformat = find_format(dataset.iloc[0][t_colname])
-    for index, row in dataset.iterrows():
-        if index == 0:
-            prev_time = row[t_colname]
-            continue
+        tformat = find_format(df.iloc[0][t_colname])
+
+    prev_time = df.iloc[0][t_colname]
+
+    for index, row in df.iterrows():
         diff = datetime.strptime(row[t_colname], tformat) - datetime.strptime(prev_time, tformat)
         if diff.total_seconds() == tdelta:
             correct += 1
@@ -286,10 +296,12 @@ def clean_building_metadata(path_to_metadata="data/buildings_metadata.csv", outp
     return df
 
 
-
-# clean_building_metadata()
-# print_difference_between_missing_data("data/raw/building_energy/4767-building_data.csv", 3600/4, "local_15min")
-# print(calculate_percentage_missing_data("data/raw/building_energy/4767-building_data.csv", 3600/4, "local_15min"))
+# # clean_building_metadata()
+# for filename in os.listdir("/home/mauk/Workspace/energy_prediction/data/raw/building_energy/1415/"):
+#     if ".csv" in filename:
+#         print(filename)
+#         # print_difference_between_missing_data(os.path.join("/home/mauk/Workspace/energy_prediction/data/raw/building_energy/1415/", filename), 3600/4, "local_15min")
+#         print("%.4f" % (calculate_percentage_missing_data(os.path.join("/home/mauk/Workspace/energy_prediction/data/raw/building_energy/1415/", filename), 3600/4, "local_15min") * 100) + "%")
 
 # time_clean_building_energy()
 #

@@ -5,7 +5,8 @@ from keras.losses import mean_absolute_percentage_error
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount, validation_metrics
+    state_size, input_feature_amount, output_feature_amount, validation_metrics, generate_validation_sample, output_std, \
+    output_mean
 from models.seq2seq.seq2seq import build_seq2seq_model
 
 # # Define some variables for generating batches
@@ -24,6 +25,7 @@ from models.seq2seq.seq2seq import build_seq2seq_model
 # seq_len_out = 96
 #
 # plot_last_time_steps_view = 96 * 2
+from utils import denormalize
 
 
 def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
@@ -115,7 +117,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
     return histories
 
 
-def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, plot=True):
+def s2s_predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, plot=True):
     """
 
     :param encoder: Encoder model
@@ -125,32 +127,36 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     :param actual_output: The actual output (during decoding time)
     :param prev_output: The previous output (during encoding time)
     :param plot: Boolean to indicate if the prediction should be plotted
-    :return: Made predictions.
+    :return: Made normalized_predictions.
     """
     # Make a prediction on the given data
-    predictions = make_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
+    normalized_predictions = make_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
                                   seq_len_out)
 
     if plot:
-        # Concat the ys so we get a smooth line for the ys
-        ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+        # Concat the normalized_ys so we get a smooth line for the normalized_ys
+        normalized_ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+
+        ys = denormalize(normalized_ys, output_std, output_mean)
+        predictions = denormalize(normalized_predictions, output_std, output_mean)
 
         # Plot them
         plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
         plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
         plt.legend()
+        plt.title(label="s2s")
         plt.show()
 
-    return predictions
+    return normalized_predictions
 
 
-def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
+def s2s_calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel, encoder, decoder):
     encdecmodel.compile(ks.optimizers.Adam(1), metrics.root_mean_squared_error)
 
     eval_loss = encdecmodel.evaluate(predict_x_batches, predict_y_batches,
                                      batch_size=1, verbose=1)
 
-    predictions = predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev, plot=False)
+    predictions = s2s_predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev, plot=False)
 
     real = predict_y_batches[0]
 
@@ -160,14 +166,17 @@ def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_p
     rrse_lower = np.sum(np.square(np.subtract(np.full(predictions.size, real_mean), real)))
     rrse = rrse_upper / rrse_lower
 
+    # https://en.wikipedia.org/wiki/Root-mean-square_deviation
+    # Calcluted with the min and max
     nrmsem = eval_loss / (np.amax(real) - np.amin(real))
+    # Calculated with the mean
     nrmsea = eval_loss / real_mean
 
     print("Loss: {}".format(eval_loss))
     print("Real mean: {}".format(real_mean))
-    print("RRSE: {}%".format(rrse * 100))
-    print("NRMSEM: {}%".format(nrmsem * 100))
-    print("NRMSEA: {}%".format(nrmsea * 100))
+    print("Root relative squared error: {0:.2f}%".format(rrse * 100)) # https://stats.stackexchange.com/questions/172382/standard-performance-measure-for-regression
+    print("Normalized root-mean-square deviation (max-min): {0:.2f}%".format(nrmsem * 100))
+    print("Normalized root-mean-square deviation (mean): {0:.2f}%".format(nrmsea * 100))
 
 
 if __name__ == "__main__":
@@ -178,13 +187,13 @@ if __name__ == "__main__":
                                                         output_feature_amount=output_feature_amount,
                                                         state_size=state_size)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=20, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
 
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/256ss-4conv-layers/l0.00025-ss256-tl0.045-vl0.660-i480-o96-e6000-seq2seq.h5")
+    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq/s2s-l0.00075-ss78-tl0.099-vl0.099-i192-o96-e300-seq2seq.h5")
 
-    # predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
+    s2s_calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel, encoder, decoder)
 
-    # predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
+    s2s_predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)

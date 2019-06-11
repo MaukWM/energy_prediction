@@ -3,31 +3,33 @@ import numpy as np
 from metrics import mean_error
 from utils import load_data
 
-timeseries = 5  # Or amount of buildings if not aggregated
-batch_size = 256
+# timeseries = 26  # Or amount of buildings if not aggregated
+batch_size = 256#512 + 256
 
 # Define the amount of features in the input and the output
 input_feature_amount = 83  # 87 without static indicators, 154 with. If aggregated, 83
 output_feature_amount = 1
 
 # Define size of states used by GRU
-state_size = 78
+state_size = 36
 
 # Input and output length sequence (24 * 4 = 96 15 minute intervals in 24 hours)
-seq_len_in = 96 * 2
+seq_len_in = 96
 seq_len_out = 96
 
 # TODO: Try out regularization
 
-plot_last_time_steps_view = 96 * 3
+plot_last_time_steps_view = 96 * 2
 
 test_train_ratio = 0.5
 
-data_dict = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak10-b35.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
+data_dict = load_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak75-b121.pkl")  # "/home/mauk/Workspace/energy_prediction/data/prepared/input_data-f83-3105.pkl")
 normalized_input_data = data_dict['normalized_input_data']
 normalized_output_data = data_dict['normalized_output_data']
 output_std = data_dict['output_std']
 output_mean = data_dict['output_mean']
+
+# print(normalized_input_data.shape)
 
 
 validation_metrics = [mean_error
@@ -100,7 +102,7 @@ def generate_batches():
 
         for i in range(batch_size):
             # Select a random building from the training set
-            bd = np.random.randint(0, timeseries)
+            bd = np.random.randint(0, normalized_input_data.shape[0])
 
             # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
             sp = np.random.randint(0, len(train_x[bd]) - seq_len_in - seq_len_out)
@@ -142,7 +144,7 @@ def generate_batch():
 
     for i in range(batch_size):
         # Select a random building from the training set
-        bd = np.random.randint(0, timeseries)
+        bd = np.random.randint(0, normalized_input_data.shape[0])
 
         # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
         sp = np.random.randint(0, len(train_x[bd]) - seq_len_in - seq_len_out)
@@ -204,9 +206,9 @@ def generate_validation_sample():
     return [batch_xe, batch_xd], batch_y, batch_y_prev
 
 
-def generate_testing_sample():
+def generate_training_sample():
     """
-    Generate batch to be used for validation, also return the previous ys so we can plot the input as well
+    Generate sample from training set
     :return: Batch for encoder and decoder inputs and a batch for output
     """
     # Split into training set

@@ -20,25 +20,33 @@ def build_seq2seq_1dconv_attention_model(input_feature_amount, output_feature_am
     else:
         x_dec_t = x_dec
 
-    input_conv1 = Conv1D(filters=64, kernel_size=9, strides=2, activation='relu')
-    input_conv2 = Conv1D(filters=64, kernel_size=7, strides=1, activation='relu')
     input_conv3 = Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')
-    input_conv4 = Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')
-    input_conv5 = Conv1D(filters=64, kernel_size=5, strides=2, activation='relu')
-    input_conv6 = Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')
-    input_conv7 = Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', name="last_conv_layer")
+    input_conv2 = Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')
+    input_conv1 = Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', name="last_conv_layer")
 
-    input_conv1_out = input_conv1(x_enc)
-    input_conv2_out = input_conv2(input_conv1_out)
-    input_conv3_out = input_conv3(input_conv2_out)
-    input_conv4_out = input_conv4(input_conv3_out)
-    input_conv5_out = input_conv5(input_conv4_out)
-    input_conv6_out = input_conv6(input_conv5_out)
-    input_conv_out = input_conv7(input_conv6_out)
+    input_conv3_out = input_conv3(x_enc)
+    input_conv2_out = input_conv2(input_conv3_out)
+    input_conv1_out = input_conv1(input_conv2_out)
+
+    # input_conv1 = Conv1D(filters=64, kernel_size=9, strides=2, activation='relu')
+    # input_conv2 = Conv1D(filters=64, kernel_size=7, strides=1, activation='relu')
+    # input_conv3 = Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')
+    # input_conv4 = Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')
+    # input_conv5 = Conv1D(filters=64, kernel_size=5, strides=2, activation='relu')
+    # input_conv6 = Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')
+    # input_conv7 = Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', name="last_conv_layer")
+    #
+    # input_conv1_out = input_conv1(x_enc)
+    # input_conv2_out = input_conv2(input_conv1_out)
+    # input_conv3_out = input_conv3(input_conv2_out)
+    # input_conv4_out = input_conv4(input_conv3_out)
+    # input_conv5_out = input_conv5(input_conv4_out)
+    # input_conv6_out = input_conv6(input_conv5_out)
+    # input_conv_out = input_conv7(input_conv6_out)
 
     # Define the encoder GRU, which only has to return a state
     encoder_gru = GRU(state_size, return_sequences=True, return_state=True, name="encoder_gru")
-    encoder_out, encoder_state = encoder_gru(input_conv_out)
+    encoder_out, encoder_state = encoder_gru(input_conv1_out)
 
     # Decoder GRU
     decoder_gru = GRU(state_size, return_state=True, return_sequences=True,
@@ -64,15 +72,19 @@ def build_seq2seq_1dconv_attention_model(input_feature_amount, output_feature_am
     # Define the separate encoder model for inferencing
     encoder_inf_inputs = Input(shape=(seq_len_in, input_feature_amount), name="encoder_inf_inputs")
 
-    input_conv1_inf = input_conv1(encoder_inf_inputs)
-    input_conv2_inf = input_conv2(input_conv1_inf)
-    input_conv3_inf = input_conv3(input_conv2_inf)
-    input_conv4_inf = input_conv4(input_conv3_inf)
-    input_conv5_inf = input_conv5(input_conv4_inf)
-    input_conv6_inf = input_conv6(input_conv5_inf)
-    input_conv_inf_out = input_conv7(input_conv6_inf)
+    # input_conv1_inf = input_conv1(encoder_inf_inputs)
+    # input_conv2_inf = input_conv2(input_conv1_inf)
+    # input_conv3_inf = input_conv3(input_conv2_inf)
+    # input_conv4_inf = input_conv4(input_conv3_inf)
+    # input_conv5_inf = input_conv5(input_conv4_inf)
+    # input_conv6_inf = input_conv6(input_conv5_inf)
+    # input_conv_inf_out = input_conv7(input_conv6_inf)
 
-    encoder_inf_out, encoder_inf_state = encoder_gru(input_conv_inf_out)
+    input_conv3_inf = input_conv3(encoder_inf_inputs)
+    input_conv2_inf = input_conv2(input_conv3_inf)
+    input_conv1_inf_out = input_conv1(input_conv2_inf)
+
+    encoder_inf_out, encoder_inf_state = encoder_gru(input_conv1_inf_out)
     encoder_model = Model(inputs=encoder_inf_inputs, outputs=[encoder_inf_out, encoder_inf_state])
 
     # Define the separate encoder model for inferencing

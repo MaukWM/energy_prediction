@@ -129,7 +129,7 @@ def train(encdecmodel, steps_per_epoch, epochs, validation_data, learning_rate, 
     return histories
 
 
-def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, plot=True):
+def s2s_attention_predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, plot=True):
     """
 
     :param encoder: Encoder model
@@ -156,6 +156,7 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
         plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
         plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
         plt.legend()
+        plt.title(label="s2s_attention")
         plt.show()
 
         plot_attention_weights(attention_weights)
@@ -163,13 +164,14 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     return normalized_predictions
 
 
-def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
+def s2s_attention_calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel, encoder,
+                                     decoder):
     encdecmodel.compile(Adam(1), metrics.root_mean_squared_error)
 
     eval_loss = encdecmodel.evaluate(predict_x_batches, predict_y_batches,
                                      batch_size=1, verbose=1)
 
-    predictions = predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev, plot=False)
+    predictions = s2s_attention_predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev, plot=False)
 
     real = predict_y_batches[0]
 
@@ -203,16 +205,17 @@ if __name__ == "__main__":
 
     encdecmodel.summary()
 
-    # train(encdecmodel=encdecmodel, steps_per_epoch=50, epochs=20, validation_data=(test_x_batches, test_y_batches),
-    #       learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
 
-    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00075-ss78-tl0.055-vl0.224-i192-o96-e300-seq2seq.h5")
+    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00075-ss48-tl0.098-vl0.096-i192-o96-e40-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
-    # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
+    s2s_attention_calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel, encoder,
+                                     decoder)
 
-    predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
+    s2s_attention_predict(encoder, decoder, predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
 
 
 

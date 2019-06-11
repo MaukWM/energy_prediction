@@ -181,8 +181,9 @@ if __name__ == "__main__":
 
     encdecmodel.summary()
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=50, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00075, plot_yscale='linear', load_weights_path=None, intermediates=10)
+    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+
     # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/s2s1dc-l0.00045-ss96-tl0.349-vl0.385-i192-o96-e100-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()

@@ -17,7 +17,7 @@ days_in_week = 7
 months_in_year = 12
 
 # Aggregation_kernel_size
-aggregation_kernel_size = 30
+aggregation_kernel_size = 75
 
 # When changing this also change in data_cleaning.py
 column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
@@ -222,6 +222,7 @@ def normalize_data(path_to_data):
     # Loop over prepared data, collecting it into numpy arrays.
     for filename in os.listdir(path_to_data):
         if ".csv" in filename:
+            print("Processing", filename)
             data = np.genfromtxt(os.path.join(path_to_data, filename), delimiter=',', dtype=np.float32)
 
             # Delete the first row (names of the columns)
