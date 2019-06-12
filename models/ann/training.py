@@ -148,12 +148,12 @@ if __name__ == "__main__":
 
     print(ann_model.summary())
 
-    train(model=ann_model, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    # train(model=ann_model, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
 
-    # ann_model.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/ann/s2s-l0.002-tl0.096-vl5.729-i192-o96-e5000-seq2seq.h5")
+    ann_model.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/ann-l0.00025-tl0.015-vl0.154-i96-o96-e2250-seq2seq.h5")
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_training_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
     # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, ann_model)
 

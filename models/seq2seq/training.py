@@ -187,10 +187,10 @@ if __name__ == "__main__":
                                                         output_feature_amount=output_feature_amount,
                                                         state_size=state_size)
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
-
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq/s2s-l0.00075-ss78-tl0.099-vl0.099-i192-o96-e300-seq2seq.h5")
+    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    #
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s-l0.00025-ss36-tl0.027-vl0.042-i96-o96-e2250-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 

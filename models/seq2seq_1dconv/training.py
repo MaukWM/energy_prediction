@@ -5,7 +5,8 @@ from keras.losses import mean_absolute_percentage_error
 
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
-    state_size, input_feature_amount, output_feature_amount, validation_metrics, generate_validation_sample
+    state_size, input_feature_amount, output_feature_amount, validation_metrics, generate_validation_sample, \
+    output_mean, output_std
 
 # Define some variables for generating batches
 from models.seq2seq_1dconv.seq2seq_1dconv import build_seq2seq_1dconv_model
@@ -25,6 +26,7 @@ from models.seq2seq_1dconv.seq2seq_1dconv import build_seq2seq_1dconv_model
 # seq_len_out = 96
 #
 # plot_last_time_steps_view = 96 * 2
+from utils import denormalize
 
 
 def make_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
@@ -129,20 +131,24 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     :return: Made predictions.
     """
     # Make a prediction on the given data
-    predictions = make_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
+    normalized_predictions = make_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
                                   seq_len_out)
 
     if plot:
         # Concat the ys so we get a smooth line for the ys
-        ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+        normalized_ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+
+        ys = denormalize(normalized_ys, output_std, output_mean)
+        predictions = denormalize(normalized_predictions, output_std, output_mean)
 
         # Plot them
         plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
         plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
         plt.legend()
+        plt.title(label="s2s_1dconv")
         plt.show()
 
-    return predictions
+    return normalized_predictions
 
 
 def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
@@ -181,10 +187,10 @@ if __name__ == "__main__":
 
     encdecmodel.summary()
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
-
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv/s2s1dc-l0.00045-ss96-tl0.349-vl0.385-i192-o96-e100-seq2seq.h5")
+    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    #
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s1dc-l0.00025-ss36-tl0.026-vl0.058-i96-o96-e2250-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 

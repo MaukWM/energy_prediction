@@ -9,7 +9,7 @@ from tensorflow.python.keras.optimizers import Adam
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
     state_size, input_feature_amount, output_feature_amount, generate_validation_sample, validation_metrics, \
-    output_mean, output_std
+    output_mean, output_std, generate_training_sample
 
 # Define some variables for generating batches
 from models.seq2seq_attention.seq2seq_attention import build_seq2seq_attention_model
@@ -205,10 +205,10 @@ if __name__ == "__main__":
 
     encdecmodel.summary()
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
-
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_attention/as2s-l0.00075-ss48-tl0.098-vl0.096-i192-o96-e40-seq2seq.h5")
+    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    #
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s-l0.00025-ss36-tl0.025-vl0.047-i96-o96-e2250-seq2seq.h5")
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 

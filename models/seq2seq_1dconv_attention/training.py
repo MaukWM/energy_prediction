@@ -6,7 +6,7 @@ from tensorflow.python.keras.optimizers import Adam
 import metrics
 from models.main import generate_batches, generate_validation_data, seq_len_in, seq_len_out, plot_last_time_steps_view, \
     state_size, input_feature_amount, output_feature_amount, generate_validation_sample, validation_metrics, \
-    generate_training_sample
+    generate_training_sample, output_std, output_mean
 
 from models.seq2seq_1dconv_attention.seq2seq_1dconv_attention import build_seq2seq_1dconv_attention_model
 
@@ -25,7 +25,7 @@ from models.seq2seq_1dconv_attention.seq2seq_1dconv_attention import build_seq2s
 # seq_len_out = 96
 #
 # plot_last_time_steps_view = 96 * 2
-from utils import plot_attention_weights
+from utils import plot_attention_weights, denormalize
 
 
 def make_attention_prediction(E, D, previous_timesteps_x, previous_y, n_output_timesteps):
@@ -138,22 +138,26 @@ def predict(encoder, decoder, enc_input, dec_input, actual_output, prev_output, 
     :return: Made predictions.
     """
     # Make a prediction on the given data
-    predictions, attention_weights = make_attention_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
+    normalized_predictions, attention_weights = make_attention_prediction(encoder, decoder, enc_input[0, :seq_len_in], dec_input[0, 0:1],
                                             seq_len_out)
 
     if plot:
         # Concat the ys so we get a smooth line for the ys
-        ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+        normalized_ys = np.concatenate([prev_output, actual_output[0]])[-plot_last_time_steps_view:]
+
+        ys = denormalize(normalized_ys, output_std, output_mean)
+        predictions = denormalize(normalized_predictions, output_std, output_mean)
 
         # Plot them
         plt.plot(range(0, plot_last_time_steps_view), ys, label="real")
         plt.plot(range(plot_last_time_steps_view - seq_len_out, plot_last_time_steps_view), predictions, label="predicted")
         plt.legend()
+        plt.title(label="s2s_1dconv_attention")
         plt.show()
 
-    plot_attention_weights(attention_weights)
+        plot_attention_weights(attention_weights)
 
-    return predictions, attention_weights
+    return normalized_predictions, attention_weights
 
 
 def calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel):
@@ -201,12 +205,12 @@ if __name__ == "__main__":
 
     print(encdecmodel.summary())
 
-    train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
-          learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    # train(encdecmodel=encdecmodel, steps_per_epoch=100, epochs=150, validation_data=(test_x_batches, test_y_batches),
+    #       learning_rate=0.00025, plot_yscale='linear', load_weights_path=None, intermediates=15)
+    #
+    encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s1dc-l0.00025-ss36-tl0.020-vl0.038-i96-o96-e2250-seq2seq.h5")
 
-    # encdecmodel.load_weights(filepath="/home/mauk/Workspace/energy_prediction/models/seq2seq_1dconv_attention/as2s1dc-l0.00075-ss96-tl0.179-vl1.360-i672-o96-e5000-seq2seq.h5")
-
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_training_sample()
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = generate_validation_sample()
 
     # calculate_accuracy(predict_x_batches, predict_y_batches, predict_y_batches_prev, encdecmodel)
 
