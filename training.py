@@ -1,3 +1,4 @@
+import os
 import sys
 
 from models.ann import Ann
@@ -7,9 +8,13 @@ from models.seq2seq_1dconv_attention import Seq2SeqConvAttention
 from models.seq2seq_attention import Seq2SeqAttention
 from utils import load_data
 
-# Load data
-data_dict = load_data(
-    "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak75-b121.pkl")
+# Define paths to data of different aggregation sizes
+data_path = "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/"
+
+data_75a_path = os.path.join(data_path, "aggregated_input_data-f83-ak75-b121.pkl")
+data_50a_path = None
+data_25a_path = os.path.join(data_path, "aggregated_input_data-f83-ak25-b121.pkl")
+data_1a_path = None
 
 batch_size = 512
 state_size = 32
@@ -44,6 +49,21 @@ if __name__ == "__main__":
 
     # To train model
     to_train = sys.argv[1]
+
+    # The aggregation level to train on
+    agg_level = sys.argv[2]
+
+    # Load data
+    if agg_level == "75":
+        data_dict = load_data(data_75a_path)
+    elif agg_level == "50":
+        data_dict = load_data(data_50a_path)
+    elif agg_level == "25":
+        data_dict = load_data(data_25a_path)
+    elif agg_level == "1":
+        data_dict = load_data(data_1a_path)
+    else:
+        raise Exception("Please give a valid aggregation size! The size given was {}.".format(agg_level))
 
     if to_train == "seq2seq":
         model = Seq2Seq(name="seq2seq",

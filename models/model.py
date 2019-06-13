@@ -1,7 +1,5 @@
 import pickle
 
-from keras.callbacks import ModelCheckpoint
-
 from metrics import mean_error
 
 import numpy as np
@@ -262,21 +260,30 @@ class Model:
         val_losses = []
         train_losses = []
 
+        # Path to save best model
+        model_saving_filepath = self.name + "-ss" + str(self.state_size) + "-best_weights.h5"
+
         from keras.losses import mean_squared_error
         if "attention" in self.name:
             from tensorflow.python.keras.optimizers import Adam
+            from tensorflow.python.keras.callbacks import ModelCheckpoint
             self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
+            checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1,
+                                         save_best_only=True,
+                                         save_weights_only=True)
         else:
+            from keras.callbacks import ModelCheckpoint
             from keras.optimizers import Adam
             self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
+            checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1,
+                                         save_best_only=True,
+                                         save_weights_only=True)
 
         history = None
 
         # Set checkpoint for saving the best model
         # model_saving_filepath = self.name + "-e{epoch:04d}-ss" + str(self.state_size) + "-vl{val_loss:.5f}.h5"
-        model_saving_filepath = self.name + "-ss" + str(self.state_size) + "-best_weights.h5"
-        checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1, save_best_only=True,
-                                     save_weights_only=True)
+
         callbacks_list = [checkpoint]
 
         for i in range(self.intermediates):
