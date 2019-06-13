@@ -17,7 +17,7 @@ data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak75-b121.pkl")
 
 batch_size = 64
-state_size = 36
+state_size = 32
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
@@ -29,13 +29,13 @@ learning_rate = 0.00075
 intermediates = 1
 plot_loss = True
 
-load_weights = False
+load_weights = True
 if load_weights:
-    load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/ann-l0.00025-tl0.015-vl0.154-i96-o96-e2250-seq2seq.h5"
-    load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s-l0.00025-ss36-tl0.027-vl0.042-i96-o96-e2250-seq2seq.h5"
-    load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s1dc-l0.00025-ss36-tl0.026-vl0.058-i96-o96-e2250-seq2seq.h5"
-    load_s2s_attention_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s-l0.00025-ss36-tl0.025-vl0.047-i96-o96-e2250-seq2seq.h5"
-    load_s2s_1dconv_attention_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s1dc-l0.00025-ss36-tl0.020-vl0.038-i96-o96-e2250-seq2seq.h5"
+    load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/ann-ss32-best_weights.h5"
+    load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq-ss32-best_weights.h5"
+    load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_1dconv-ss32-best_weights.h5"
+    load_s2s_attention_weights_path = None #"/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s-l0.00025-ss36-tl0.025-vl0.047-i96-o96-e2250-seq2seq.h5"
+    load_s2s_1dconv_attention_weights_path = None#"/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s1dc-l0.00025-ss36-tl0.020-vl0.038-i96-o96-e2250-seq2seq.h5"
 else:
     load_ann_weights_path = None
     load_s2s_weights_path = None
