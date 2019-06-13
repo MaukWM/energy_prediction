@@ -22,7 +22,7 @@ class Seq2SeqConv(Model):
         self.name = "seq2seq_1dconv"
 
         # Build the model
-        self.encoder, self.decoder, self.encdecmodel = self.build_model()
+        self.encoder, self.decoder, self.model = self.build_model()
 
         # Generate the validation data
         self.validation_data = self.generate_validation_data()
@@ -33,7 +33,7 @@ class Seq2SeqConv(Model):
         self.learning_rate = learning_rate
         self.intermediates = intermediates
         if load_weights_path:
-            self.encdecmodel.load_weights(load_weights_path)
+            self.model.load_weights(load_weights_path)
         self.plot_loss = plot_loss
 
     def build_model(self):
@@ -135,9 +135,9 @@ class Seq2SeqConv(Model):
         return normalized_predictions
 
     def calculate_accuracy(self, predict_x_batches, predict_y_batches):
-        self.encdecmodel.compile(ks.optimizers.Adam(1), metrics.root_mean_squared_error)
+        self.model.compile(ks.optimizers.Adam(1), metrics.root_mean_squared_error)
 
-        eval_loss = self.encdecmodel.evaluate(predict_x_batches, predict_y_batches, batch_size=1, verbose=1)
+        eval_loss = self.model.evaluate(predict_x_batches, predict_y_batches, batch_size=1, verbose=1)
 
         real = predict_y_batches[0]
 
@@ -158,18 +158,18 @@ class Seq2SeqConv(Model):
         """
         histories = []
 
-        self.encdecmodel.compile(ks.optimizers.Adam(self.learning_rate), ks.losses.mean_squared_error,
-                                 metrics=self.validation_metrics)
+        self.model.compile(ks.optimizers.Adam(self.learning_rate), ks.losses.mean_squared_error,
+                           metrics=self.validation_metrics)
 
         history = None
 
         for i in range(self.intermediates):
             try:
-                history = self.encdecmodel.fit_generator(self.generate_training_batches(),
-                                                         steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
-                                                         validation_data=self.validation_data)
+                history = self.model.fit_generator(self.generate_training_batches(),
+                                                   steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
+                                                   validation_data=self.validation_data)
 
-                self.encdecmodel.save_weights(
+                self.model.save_weights(
                     "s2s_1dconv-l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-seq2seq.h5".format(str(self.learning_rate),
                                                                                      str(self.state_size),
                                                                                      history.history['loss'][-1],
@@ -178,7 +178,7 @@ class Seq2SeqConv(Model):
                                                                                      self.seq_len_out))
                 histories.append(history)
             except KeyboardInterrupt:
-                self.encdecmodel.save_weights(
+                self.model.save_weights(
                     "s2s_1dconv-l{0}-ss{1}-interrupted-i{2}-o{3}-seq2seq.h5".format(str(self.learning_rate),
                                                                              str(self.state_size),
                                                                              self.seq_len_in,
@@ -191,6 +191,7 @@ class Seq2SeqConv(Model):
                 plt.plot(history.history['val_loss'], label="val_loss")
                 plt.yscale('linear')
                 plt.legend()
+                plt.title(label=self.name + " loss")
                 plt.show()
 
         # Return the history of the training session

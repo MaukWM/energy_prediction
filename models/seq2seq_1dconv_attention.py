@@ -1,20 +1,20 @@
-from tensorflow.python.keras import losses
-from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed
+from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, Conv1D
+from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.models import Model as tsModel
-from tensorflow.python.keras.optimizers import Adam, SGD
 
 import metrics
 from layers.attention import AttentionLayer
 
 from models.model import Model
 
+import keras as ks
 import numpy as np
 import matplotlib.pyplot as plt
 
 from utils import denormalize, plot_attention_weights
 
 
-class Seq2SeqAttention(Model):
+class Seq2SeqConvAttention(Model):
 
     def __init__(self, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
                  seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate, intermediates,
@@ -24,7 +24,7 @@ class Seq2SeqAttention(Model):
                          seq_len_in, seq_len_out, plot_time_steps_view)
 
         # Name
-        self.name = "seq2seq_attention"
+        self.name = "seq2seq_1dconv_attention"
 
         # Build the model
         self.encoder, self.decoder, self.model = self.build_model()
@@ -43,20 +43,28 @@ class Seq2SeqAttention(Model):
 
     def build_model(self):
         """
-        Function to build the seq2seq model used.
+        Function to build the model.
         :return: Encoder model, decoder model (used for predicting) and full model (used for training).
         """
         # Define model inputs for the encoder/decoder stack
         x_enc = Input(shape=(self.seq_len_in, self.input_feature_amount), name="x_enc")
         x_dec = Input(shape=(self.seq_len_out, self.output_feature_amount), name="x_dec")
 
+        input_conv3 = Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')
+        input_conv2 = Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')
+        input_conv1 = Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', name="last_conv_layer")
+
+        input_conv3_out = input_conv3(x_enc)
+        input_conv2_out = input_conv2(input_conv3_out)
+        input_conv1_out = input_conv1(input_conv2_out)
+
         # Define the encoder GRU, which only has to return a state
         encoder_gru = GRU(self.state_size, return_sequences=True, return_state=True, name="encoder_gru")
-        encoder_out, encoder_state = encoder_gru(x_enc)
+        encoder_out, encoder_state = encoder_gru(input_conv1_out)
 
         # Decoder GRU
         decoder_gru = GRU(self.state_size, return_state=True, return_sequences=True,
-                          name="decoder_gru")
+                                      name="decoder_gru")
         # Use these definitions to calculate the outputs of out encoder/decoder stack
         dec_intermediates, decoder_state = decoder_gru(x_dec, initial_state=encoder_state)
 
@@ -77,12 +85,17 @@ class Seq2SeqAttention(Model):
 
         # Define the separate encoder model for inferencing
         encoder_inf_inputs = Input(shape=(self.seq_len_in, self.input_feature_amount), name="encoder_inf_inputs")
-        encoder_inf_out, encoder_inf_state = encoder_gru(encoder_inf_inputs)
+
+        input_conv3_inf = input_conv3(encoder_inf_inputs)
+        input_conv2_inf = input_conv2(input_conv3_inf)
+        input_conv1_inf_out = input_conv1(input_conv2_inf)
+
+        encoder_inf_out, encoder_inf_state = encoder_gru(input_conv1_inf_out)
         encoder_model = tsModel(inputs=encoder_inf_inputs, outputs=[encoder_inf_out, encoder_inf_state])
 
         # Define the separate encoder model for inferencing
         decoder_inf_inputs = Input(shape=(1, self.output_feature_amount), name="decoder_inputs")
-        encoder_inf_states = Input(shape=(self.seq_len_in, self.state_size), name="encoder_inf_states")
+        encoder_inf_states = Input(shape=(encdecmodel.get_layer('last_conv_layer').output_shape[1], self.state_size), name="decoder_inf_states")
         decoder_init_state = Input(shape=(self.state_size,), name="decoder_init")
 
         decoder_inf_out, decoder_inf_state = decoder_gru(decoder_inf_inputs, initial_state=decoder_init_state)
@@ -90,7 +103,7 @@ class Seq2SeqAttention(Model):
         decoder_inf_concat = Concatenate(axis=-1, name='concat')([decoder_inf_out, attn_inf_out])
         decoder_inf_pred = TimeDistributed(dense)(decoder_inf_concat)
         decoder_model = tsModel(inputs=[encoder_inf_states, decoder_init_state, decoder_inf_inputs],
-                                outputs=[decoder_inf_pred, attn_inf_states, decoder_inf_state])
+                              outputs=[decoder_inf_pred, attn_inf_states, decoder_inf_state])
 
         return encoder_model, decoder_model, encdecmodel
 
@@ -120,7 +133,9 @@ class Seq2SeqAttention(Model):
             attention_weights.append(attention)
 
         # Reshape and transpose attention weights so they make more sense
-        attention_weights = np.reshape(np.stack(attention_weights), newshape=(self.seq_len_out, self.seq_len_in)).transpose()
+        attention_weights = np.reshape(np.stack(attention_weights), newshape=(self.seq_len_out,
+                                                                              self.encoder.get_layer("last_conv_layer")
+                                                                              .output_shape[1])).transpose()
 
         # Concatenate the outputs, as they are batches
         # For example, going from a list of (1,1,1) to one unit of (1,100,1)
@@ -159,7 +174,7 @@ class Seq2SeqAttention(Model):
         return normalized_predictions
 
     def calculate_accuracy(self, predict_x_batches, predict_y_batches):
-        self.model.compile(SGD(1), metrics.root_mean_squared_error)
+        self.model.compile(Adam(1), metrics.root_mean_squared_error)
 
         eval_loss = self.model.evaluate(predict_x_batches, predict_y_batches, batch_size=1, verbose=1)
 
@@ -182,7 +197,7 @@ class Seq2SeqAttention(Model):
         """
         histories = []
 
-        self.model.compile(Adam(self.learning_rate), losses.mean_squared_error,
+        self.model.compile(Adam(self.learning_rate), ks.losses.mean_squared_error,
                            metrics=self.validation_metrics)
 
         history = None
@@ -194,7 +209,7 @@ class Seq2SeqAttention(Model):
                                                    validation_data=self.validation_data)
 
                 self.model.save_weights(
-                    "as2s-l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-seq2seq.h5".format(str(self.learning_rate),
+                    "as2s_1dconv-l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-seq2seq.h5".format(str(self.learning_rate),
                                                                                      str(self.state_size),
                                                                                      history.history['loss'][-1],
                                                                                      history.history['val_loss'][-1],
@@ -203,7 +218,7 @@ class Seq2SeqAttention(Model):
                 histories.append(history)
             except KeyboardInterrupt:
                 self.model.save_weights(
-                    "as2s-l{0}-ss{1}-interrupted-i{2}-o{3}-seq2seq.h5".format(str(self.learning_rate),
+                    "as2s_1dconv-l{0}-ss{1}-interrupted-i{2}-o{3}-seq2seq.h5".format(str(self.learning_rate),
                                                                              str(self.state_size),
                                                                              self.seq_len_in,
                                                                              self.seq_len_out))

@@ -162,6 +162,7 @@ class Ann(Model):
                 plt.plot(history.history['val_loss'], label="val_loss")
                 plt.yscale('linear')
                 plt.legend()
+                plt.title(label=self.name + " loss")
                 plt.show()
 
         # Return the history of the training session
