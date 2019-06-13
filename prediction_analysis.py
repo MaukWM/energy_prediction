@@ -1,3 +1,6 @@
+import os
+import pickle
+
 import metrics
 from models.ann import Ann
 from models.seq2seq import Seq2Seq
@@ -13,24 +16,32 @@ import numpy as np
 data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak75-b121.pkl")
 
-batch_size = 128
+batch_size = 64
 state_size = 36
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
 seq_len_out = 96
 plot_time_steps_view = 96 * 2
-steps_per_epoch = 15
-epochs = 3
+steps_per_epoch = 10
+epochs = 40
 learning_rate = 0.00075
 intermediates = 1
 plot_loss = True
 
-load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/ann-l0.00025-tl0.015-vl0.154-i96-o96-e2250-seq2seq.h5"
-load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s-l0.00025-ss36-tl0.027-vl0.042-i96-o96-e2250-seq2seq.h5"
-load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s1dc-l0.00025-ss36-tl0.026-vl0.058-i96-o96-e2250-seq2seq.h5"
-load_s2s_attention_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s-l0.00025-ss36-tl0.025-vl0.047-i96-o96-e2250-seq2seq.h5"
-load_s2s_1dconv_attention_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s1dc-l0.00025-ss36-tl0.020-vl0.038-i96-o96-e2250-seq2seq.h5"
+load_weights = False
+if load_weights:
+    load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/ann-l0.00025-tl0.015-vl0.154-i96-o96-e2250-seq2seq.h5"
+    load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s-l0.00025-ss36-tl0.027-vl0.042-i96-o96-e2250-seq2seq.h5"
+    load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/s2s1dc-l0.00025-ss36-tl0.026-vl0.058-i96-o96-e2250-seq2seq.h5"
+    load_s2s_attention_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s-l0.00025-ss36-tl0.025-vl0.047-i96-o96-e2250-seq2seq.h5"
+    load_s2s_1dconv_attention_weights_path = "/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s1dc-l0.00025-ss36-tl0.020-vl0.038-i96-o96-e2250-seq2seq.h5"
+else:
+    load_ann_weights_path = None
+    load_s2s_weights_path = None
+    load_s2s_1dconv_weights_path = None
+    load_s2s_attention_weights_path = None
+    load_s2s_1dconv_attention_weights_path = None
 
 
 def train_models(models):
@@ -40,6 +51,60 @@ def train_models(models):
     """
     for model in models:
         model.train()
+
+
+def load_losses(path_to_history_folder):
+    """
+    Load all loss histories from a folder into a dict
+    :param path_to_history_folder: Path to histories
+    :return: Losses dict
+    """
+    losses = []
+    for filename in os.listdir(path_to_history_folder):
+        if "history" in filename:
+            history_data_pkl = open(os.path.join(path_to_history_folder, filename), "rb")
+            history_data = pickle.load(history_data_pkl)
+            losses.append(history_data)
+    return losses
+
+
+def plot_loss_graph_single_model(losses_dict):
+    """
+    Plot the loss of a single model, given a dictionary with losses and validation losses
+    :param losses_dict: The losses dict
+    """
+    losses = losses_dict['losses']
+    val_losses = losses_dict['val_losses']
+
+    plt.plot(losses, label="training_loss")
+    plt.plot(val_losses, label="validation_loss")
+    plt.legend()
+    plt.title(label=losses_dict['name'] + " loss")
+    plt.show()
+
+
+def plot_loss_graph_validation(losses_dict_list):
+    """
+    Plot all validation losses from a losses dict
+    :param losses_dict_list: Dict containing validation losses
+    """
+    for loss_dict in losses_dict_list:
+        plt.plot(loss_dict['val_losses'][5:], label=loss_dict['name'])
+    plt.legend()
+    plt.title(label="validation losses")
+    plt.show()
+
+
+def plot_loss_graph_training(losses_dict_list):
+    """
+    Plot all training losses from a losses dict
+    :param losses_dict_list: Dict containing validation losses
+    """
+    for loss_dict in losses_dict_list:
+        plt.plot(loss_dict['losses_dict'][5:], label=loss_dict['name'])
+    plt.legend()
+    plt.title(label="training losses")
+    plt.show()
 
 
 def plot_random_sample(models):
@@ -73,7 +138,7 @@ def calculate_eval_loss_models(models):
     """
     Calculate the evaluation loss of all the models
     :param models: The models
-    :return: The losses, as a dict, mapping the model to the loss
+    :return: The losses_dict, as a dict, mapping the model to the loss
     """
     predict_x_batches, predict_y_batches = seq2seq.generate_validation_data()
     losses = {}
@@ -101,7 +166,6 @@ def calculate_nrmse_models(models):
     reals = data_dict['normalized_output_data']
     max_val = np.amax(reals)
     min_val = np.amin(reals)
-    mean_val = np.mean(reals)
     nrmses = {}
     for model in losses.keys():
         nrmses[model] = losses[model] / (max_val - min_val)
@@ -124,7 +188,8 @@ if __name__ == "__main__":
     # Init models
     models = []
 
-    seq2seq = Seq2Seq(data_dict=data_dict,
+    seq2seq = Seq2Seq(name="seq2seq",
+                      data_dict=data_dict,
                       batch_size=batch_size,
                       state_size=state_size,
                       input_feature_amount=input_feature_amount,
@@ -140,7 +205,8 @@ if __name__ == "__main__":
                       load_weights_path=load_s2s_weights_path
                       )
 
-    seq2seq_1dconv = Seq2SeqConv(data_dict=data_dict,
+    seq2seq_1dconv = Seq2SeqConv(name="seq2seq_1dconv",
+                                 data_dict=data_dict,
                                  batch_size=batch_size,
                                  state_size=state_size,
                                  input_feature_amount=input_feature_amount,
@@ -156,7 +222,8 @@ if __name__ == "__main__":
                                  load_weights_path=load_s2s_1dconv_weights_path
                                  )
 
-    ann = Ann(data_dict=data_dict,
+    ann = Ann(name="ann",
+              data_dict=data_dict,
               batch_size=batch_size,
               state_size=state_size,
               input_feature_amount=input_feature_amount,
@@ -172,7 +239,8 @@ if __name__ == "__main__":
               load_weights_path=load_ann_weights_path
               )
 
-    seq2seq_attention = Seq2SeqAttention(data_dict=data_dict,
+    seq2seq_attention = Seq2SeqAttention(name="seq2seq_attention",
+                                         data_dict=data_dict,
                                          batch_size=batch_size,
                                          state_size=state_size,
                                          input_feature_amount=input_feature_amount,
@@ -188,7 +256,8 @@ if __name__ == "__main__":
                                          load_weights_path=load_s2s_attention_weights_path
                                          )
 
-    seq2seq_1dconv_attention = Seq2SeqConvAttention(data_dict=data_dict,
+    seq2seq_1dconv_attention = Seq2SeqConvAttention(name="seq2seq_1dconv_attention",
+                                                    data_dict=data_dict,
                                                     batch_size=batch_size,
                                                     state_size=state_size,
                                                     input_feature_amount=input_feature_amount,
@@ -204,12 +273,23 @@ if __name__ == "__main__":
                                                     load_weights_path=load_s2s_1dconv_attention_weights_path
                                                     )
 
+    models.append(seq2seq_attention)
+    models.append(seq2seq_1dconv_attention)
     models.append(seq2seq)
     models.append(seq2seq_1dconv)
     models.append(ann)
-    models.append(seq2seq_attention)
-    models.append(seq2seq_1dconv_attention)
+
+    # train_models(models)
 
     predict_x_batches, predict_y_batches, predict_y_batches_prev = seq2seq.create_validation_sample()
 
     print_nrmse_models(models)
+
+    losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
+
+    # print(losses_dict)
+
+    # plot_loss_graph_single_model(losses_dict[0])
+
+    plot_loss_graph_validation(losses_dict)
+    plot_loss_graph_training(losses_dict)

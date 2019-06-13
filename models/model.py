@@ -1,12 +1,16 @@
+import pickle
+
 from metrics import mean_error
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Model:
 
-    def __init__(self, data_dict, batch_size=256, state_size=42, input_feature_amount=83, output_feature_amount=1,
-                 seq_len_in=96, seq_len_out=96, plot_time_steps_view=192):
+    def __init__(self, name, data_dict, batch_size=256, state_size=42, input_feature_amount=83, output_feature_amount=1,
+                 seq_len_in=96, seq_len_out=96, plot_time_steps_view=192, steps_per_epoch=100, epochs=50,
+                 learning_rate=0.00075, intermediates=1):
         self.batch_size = batch_size
         self.state_size = state_size
         self.input_feature_amount = input_feature_amount
@@ -18,9 +22,23 @@ class Model:
         self.normalized_output_data = data_dict['normalized_output_data']
         self.output_std = data_dict['output_std']
         self.output_mean = data_dict['output_mean']
+        self.name = name
+        self.test_train_ratio = 0.5
+
+        # Generate the validation data
+        self.validation_data = self.generate_validation_data()
+
+        # Training info
+        self.steps_per_epoch = steps_per_epoch
+        self.epochs = epochs
+        self.learning_rate = learning_rate
+        self.intermediates = intermediates
+
+        # To be determined
+        self.model = None
+        self.plot_loss = False
 
         self.validation_metrics = [mean_error]
-        self.test_train_ratio = 0.5
 
     def generate_validation_data(self, slice_point=1500):
         """
@@ -232,3 +250,66 @@ class Model:
         batch_y = np.stack(batch_y)
 
         return [batch_xe, batch_xd], batch_y, batch_y_prev
+
+    def train(self):
+        """
+        Train the model
+        :return: Histories
+        """
+        histories = []
+        val_losses = []
+        losses = []
+
+        from keras.losses import mean_squared_error
+        if "attention" in self.name:
+            from tensorflow.python.keras.optimizers import Adam
+            self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
+        else:
+            from keras.optimizers import Adam
+            self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
+
+        history = None
+
+        for i in range(self.intermediates):
+            try:
+                history = self.model.fit_generator(self.generate_training_batches(),
+                                                   steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
+                                                   validation_data=self.validation_data)
+
+                self.model.save_weights(
+                    self.name + "-l{0}-ss{1}-tl{2:.4f}-vl{3:.4f}-i{4}-o{5}.h5".format(str(self.learning_rate),
+                                                                              str(self.state_size),
+                                                                              history.history['loss'][-1],
+                                                                              history.history['val_loss'][-1],
+                                                                              self.seq_len_in,
+                                                                              self.seq_len_out))
+
+                val_losses.extend(history.history['val_loss'])
+                losses.extend(history.history['loss'])
+
+                histories.append(history)
+            except KeyboardInterrupt:
+                self.model.save_weights(
+                    self.name + "-l{0}-ss{1}-interrupted-i{2}-o{3}.h5".format(str(self.learning_rate),
+                                                                      str(self.state_size),
+                                                                      self.seq_len_in,
+                                                                      self.seq_len_out))
+                print("Training interrupted!")
+
+            # If given, plot the loss
+            if self.plot_loss and history:
+                plt.plot(history.history['loss'], label="loss")
+                plt.plot(history.history['val_loss'], label="val_loss")
+                plt.yscale('linear')
+                plt.legend()
+                plt.title(label=self.name + " loss")
+                plt.show()
+
+        # Write file with history of loss
+        history_file = open("history-{0}-minvl{1:.4f}-minl{2:.4f}.pkl".format(self.name,
+                                                                              np.amin(val_losses),
+                                                                              np.amin(losses)), "wb")
+        pickle.dump({"name": self.name, "losses": losses, "val_losses": val_losses}, history_file)
+
+        # Return the history of the training session
+        return histories

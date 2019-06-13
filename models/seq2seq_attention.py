@@ -1,7 +1,6 @@
-from tensorflow.python.keras import losses
 from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed
 from tensorflow.python.keras.models import Model as tsModel
-from tensorflow.python.keras.optimizers import Adam, SGD
+from tensorflow.python.keras.optimizers import Adam
 
 import metrics
 from layers.attention import AttentionLayer
@@ -16,29 +15,20 @@ from utils import denormalize, plot_attention_weights
 
 class Seq2SeqAttention(Model):
 
-    def __init__(self, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
+    def __init__(self, name, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
                  seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate, intermediates,
                  load_weights_path=None, plot_loss=False):
 
-        super().__init__(data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
-                         seq_len_in, seq_len_out, plot_time_steps_view)
-
-        # Name
-        self.name = "seq2seq_attention"
+        super().__init__(name, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
+                         seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate,
+                         intermediates)
 
         # Build the model
         self.encoder, self.decoder, self.model = self.build_model()
 
-        # Generate the validation data
-        self.validation_data = self.generate_validation_data()
-
-        # Training info
-        self.steps_per_epoch = steps_per_epoch
-        self.epochs = epochs
-        self.learning_rate = learning_rate
-        self.intermediates = intermediates
         if load_weights_path:
             self.model.load_weights(load_weights_path)
+
         self.plot_loss = plot_loss
 
     def build_model(self):
@@ -159,7 +149,7 @@ class Seq2SeqAttention(Model):
         return normalized_predictions
 
     def calculate_accuracy(self, predict_x_batches, predict_y_batches):
-        self.model.compile(SGD(1), metrics.root_mean_squared_error)
+        self.model.compile(Adam(1), metrics.root_mean_squared_error)
 
         eval_loss = self.model.evaluate(predict_x_batches, predict_y_batches, batch_size=1, verbose=1)
 
@@ -175,48 +165,4 @@ class Seq2SeqAttention(Model):
         print(self.name, "normalized root-mean-square deviation (max-min): {0:.2f}%".format(nrmsem * 100))
         print(self.name, "normalized root-mean-square deviation (mean): {0:.2f}%".format(nrmsea * 100))
 
-    def train(self):
-        """
-        Train the model
-        :return: Histories
-        """
-        histories = []
 
-        self.model.compile(Adam(self.learning_rate), losses.mean_squared_error,
-                           metrics=self.validation_metrics)
-
-        history = None
-
-        for i in range(self.intermediates):
-            try:
-                history = self.model.fit_generator(self.generate_training_batches(),
-                                                   steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
-                                                   validation_data=self.validation_data)
-
-                self.model.save_weights(
-                    "as2s-l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-seq2seq.h5".format(str(self.learning_rate),
-                                                                                     str(self.state_size),
-                                                                                     history.history['loss'][-1],
-                                                                                     history.history['val_loss'][-1],
-                                                                                     self.seq_len_in,
-                                                                                     self.seq_len_out))
-                histories.append(history)
-            except KeyboardInterrupt:
-                self.model.save_weights(
-                    "as2s-l{0}-ss{1}-interrupted-i{2}-o{3}-seq2seq.h5".format(str(self.learning_rate),
-                                                                             str(self.state_size),
-                                                                             self.seq_len_in,
-                                                                             self.seq_len_out))
-                print("Training interrupted!")
-
-            # If given, plot the loss
-            if self.plot_loss and history:
-                plt.plot(history.history['loss'], label="loss")
-                plt.plot(history.history['val_loss'], label="val_loss")
-                plt.yscale('linear')
-                plt.legend()
-                plt.title(label=self.name + " loss")
-                plt.show()
-
-        # Return the history of the training session
-        return histories

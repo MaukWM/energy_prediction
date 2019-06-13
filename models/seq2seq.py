@@ -1,3 +1,5 @@
+import pickle
+
 import metrics
 
 from models.model import Model
@@ -11,29 +13,20 @@ from utils import denormalize
 
 class Seq2Seq(Model):
 
-    def __init__(self, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
+    def __init__(self, name, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
                  seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate, intermediates,
                  load_weights_path=None, plot_loss=False):
 
-        super().__init__(data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
-                         seq_len_in, seq_len_out, plot_time_steps_view)
-
-        # Name
-        self.name = "seq2seq"
+        super().__init__(name, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
+                         seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate,
+                         intermediates)
 
         # Build the model
         self.encoder, self.decoder, self.model = self.build_model()
 
-        # Generate the validation data
-        self.validation_data = self.generate_validation_data()
-
-        # Training info
-        self.steps_per_epoch = steps_per_epoch
-        self.epochs = epochs
-        self.learning_rate = learning_rate
-        self.intermediates = intermediates
         if load_weights_path:
             self.model.load_weights(load_weights_path)
+
         self.plot_loss = plot_loss
 
     def build_model(self):
@@ -147,48 +140,60 @@ class Seq2Seq(Model):
         print(self.name, "normalized root-mean-square deviation (max-min): {0:.2f}%".format(nrmsem * 100))
         print(self.name, "normalized root-mean-square deviation (mean): {0:.2f}%".format(nrmsea * 100))
 
-    def train(self):
-        """
-        Train the model
-        :return: Histories
-        """
-        histories = []
-
-        self.model.compile(ks.optimizers.Adam(self.learning_rate), ks.losses.mean_squared_error,
-                           metrics=self.validation_metrics)
-
-        history = None
-
-        for i in range(self.intermediates):
-            try:
-                history = self.model.fit_generator(self.generate_training_batches(),
-                                                   steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
-                                                   validation_data=self.validation_data)
-
-                self.model.save_weights(
-                    "s2s-l{0}-ss{1}-tl{2:.3f}-vl{3:.3f}-i{4}-o{5}-seq2seq.h5".format(str(self.learning_rate),
-                                                                                     str(self.state_size),
-                                                                                     history.history['loss'][-1],
-                                                                                     history.history['val_loss'][-1],
-                                                                                     self.seq_len_in,
-                                                                                     self.seq_len_out))
-                histories.append(history)
-            except KeyboardInterrupt:
-                self.model.save_weights(
-                    "s2s-l{0}-ss{1}-interrupted-i{2}-o{3}-seq2seq.h5".format(str(self.learning_rate),
-                                                                             str(self.state_size),
-                                                                             self.seq_len_in,
-                                                                             self.seq_len_out))
-                print("Training interrupted!")
-
-            # If given, plot the loss
-            if self.plot_loss and history:
-                plt.plot(history.history['loss'], label="loss")
-                plt.plot(history.history['val_loss'], label="val_loss")
-                plt.yscale('linear')
-                plt.legend()
-                plt.title(label=self.name + " loss")
-                plt.show()
-
-        # Return the history of the training session
-        return histories
+    # def train(self):
+    #     """
+    #     Train the model
+    #     :return: Histories
+    #     """
+    #     histories = []
+    #     val_losses = []
+    #     losses_dict = []
+    #
+    #     self.model.compile(ks.optimizers.Adam(self.learning_rate), ks.losses_dict.mean_squared_error,
+    #                        metrics=self.validation_metrics)
+    #
+    #     history = None
+    #
+    #     for i in range(self.intermediates):
+    #         try:
+    #             history = self.model.fit_generator(self.generate_training_batches(),
+    #                                                steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
+    #                                                validation_data=self.validation_data)
+    #
+    #             self.model.save_weights(
+    #                 self.name + "-l{0}-ss{1}-tl{2:.4f}-vl{3:.4f}-i{4}-o{5}.h5".format(str(self.learning_rate),
+    #                                                                          str(self.state_size),
+    #                                                                          history.history['loss'][-1],
+    #                                                                          history.history['val_loss'][-1],
+    #                                                                          self.seq_len_in,
+    #                                                                          self.seq_len_out))
+    #
+    #             val_losses.extend(history.history['val_loss'])
+    #             losses_dict.extend(history.history['loss'])
+    #
+    #             histories.append(history)
+    #         except KeyboardInterrupt:
+    #             self.model.save_weights(
+    #                 self.name + "-l{0}-ss{1}-interrupted-i{2}-o{3}.h5".format(str(self.learning_rate),
+    #                                                                  str(self.state_size),
+    #                                                                  self.seq_len_in,
+    #                                                                  self.seq_len_out))
+    #             print("Training interrupted!")
+    #
+    #         # If given, plot the loss
+    #         if self.plot_loss and history:
+    #             plt.plot(history.history['loss'], label="loss")
+    #             plt.plot(history.history['val_loss'], label="val_loss")
+    #             plt.yscale('linear')
+    #             plt.legend()
+    #             plt.title(label=self.name + " loss")
+    #             plt.show()
+    #
+    #     # Write file with history of loss
+    #     history_file = open("{0}-minvl{1:.4f}-minl{2:.4f}-history.pkl".format(self.name,
+    #                                                                           np.amin(val_losses),
+    #                                                                           np.amin(losses_dict)), "wb")
+    #     pickle.dump({"losses_dict": losses_dict, "val_losses": val_losses}, history_file)
+    #
+    #     # Return the history of the training session
+    #     return histories
