@@ -1,5 +1,7 @@
 import pickle
 
+from keras.callbacks import ModelCheckpoint
+
 from metrics import mean_error
 
 import numpy as np
@@ -258,7 +260,7 @@ class Model:
         """
         histories = []
         val_losses = []
-        losses = []
+        train_losses = []
 
         from keras.losses import mean_squared_error
         if "attention" in self.name:
@@ -270,30 +272,37 @@ class Model:
 
         history = None
 
+        # Set checkpoint for saving the best model
+        # model_saving_filepath = self.name + "-e{epoch:04d}-ss" + str(self.state_size) + "-vl{val_loss:.5f}.h5"
+        model_saving_filepath = self.name + "-ss" + str(self.state_size) + "-best_weights.h5"
+        checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1, save_best_only=True,
+                                     save_weights_only=True)
+        callbacks_list = [checkpoint]
+
         for i in range(self.intermediates):
             try:
                 history = self.model.fit_generator(self.generate_training_batches(),
                                                    steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
-                                                   validation_data=self.validation_data)
+                                                   validation_data=self.validation_data, callbacks=callbacks_list)
 
-                self.model.save_weights(
-                    self.name + "-l{0}-ss{1}-tl{2:.4f}-vl{3:.4f}-i{4}-o{5}.h5".format(str(self.learning_rate),
-                                                                              str(self.state_size),
-                                                                              history.history['loss'][-1],
-                                                                              history.history['val_loss'][-1],
-                                                                              self.seq_len_in,
-                                                                              self.seq_len_out))
+                # self.model.save_weights(
+                #     self.name + "-l{0}-ss{1}-tl{2:.4f}-vl{3:.4f}-i{4}-o{5}.h5".format(str(self.learning_rate),
+                #                                                               str(self.state_size),
+                #                                                               history.history['loss'][-1],
+                #                                                               history.history['val_loss'][-1],
+                #                                                               self.seq_len_in,
+                #                                                               self.seq_len_out))
 
                 val_losses.extend(history.history['val_loss'])
-                losses.extend(history.history['loss'])
+                train_losses.extend(history.history['loss'])
 
                 histories.append(history)
             except KeyboardInterrupt:
-                self.model.save_weights(
-                    self.name + "-l{0}-ss{1}-interrupted-i{2}-o{3}.h5".format(str(self.learning_rate),
-                                                                      str(self.state_size),
-                                                                      self.seq_len_in,
-                                                                      self.seq_len_out))
+                # self.model.save_weights(
+                #     self.name + "-l{0}-ss{1}-interrupted-i{2}-o{3}.h5".format(str(self.learning_rate),
+                #                                                       str(self.state_size),
+                #                                                       self.seq_len_in,
+                #                                                       self.seq_len_out))
                 print("Training interrupted!")
 
             # If given, plot the loss
@@ -308,8 +317,8 @@ class Model:
         # Write file with history of loss
         history_file = open("history-{0}-minvl{1:.4f}-minl{2:.4f}.pkl".format(self.name,
                                                                               np.amin(val_losses),
-                                                                              np.amin(losses)), "wb")
-        pickle.dump({"name": self.name, "losses": losses, "val_losses": val_losses}, history_file)
+                                                                              np.amin(train_losses)), "wb")
+        pickle.dump({"name": self.name, "train_losses": train_losses, "val_losses": val_losses}, history_file)
 
         # Return the history of the training session
         return histories

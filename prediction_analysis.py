@@ -70,13 +70,13 @@ def load_losses(path_to_history_folder):
 
 def plot_loss_graph_single_model(losses_dict):
     """
-    Plot the loss of a single model, given a dictionary with losses and validation losses
+    Plot the loss of a single model, given a dictionary with train_losses and validation_losses
     :param losses_dict: The losses dict
     """
-    losses = losses_dict['losses']
+    train_losses = losses_dict['train_losses']
     val_losses = losses_dict['val_losses']
 
-    plt.plot(losses, label="training_loss")
+    plt.plot(train_losses, label="training_loss")
     plt.plot(val_losses, label="validation_loss")
     plt.legend()
     plt.title(label=losses_dict['name'] + " loss")
@@ -101,7 +101,7 @@ def plot_loss_graph_training(losses_dict_list):
     :param losses_dict_list: Dict containing validation losses
     """
     for loss_dict in losses_dict_list:
-        plt.plot(loss_dict['losses_dict'][5:], label=loss_dict['name'])
+        plt.plot(loss_dict['train_losses'][5:], label=loss_dict['name'])
     plt.legend()
     plt.title(label="training losses")
     plt.show()
