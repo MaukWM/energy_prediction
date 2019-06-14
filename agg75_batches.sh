@@ -1,0 +1,7 @@
+#!/bin/sh
+training_scripts/sbatch_training_job_agg75_ann.sh
+training_scripts/sbatch_training_job_agg75_s2s.sh
+training_scripts/sbatch_training_job_agg75_s2s_1dconv.sh
+training_scripts/sbatch_training_job_agg75_s2s_1dconv_attention.sh
+training_scripts/sbatch_training_job_agg75_s2s_attention.sh
+

@@ -17,7 +17,7 @@ days_in_week = 7
 months_in_year = 12
 
 # Aggregation_kernel_size
-aggregation_kernel_size = 25
+aggregation_kernel_size = 1
 
 # When changing this also change in data_cleaning.py
 column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column
@@ -312,12 +312,12 @@ def normalize_and_pickle_prepared_data(prepared_data_folder="data/prepared/aggre
 
 
 def the_whole_shibang():
-    cleaned_dfs = data_cleaning.time_clean_building_energy(input_folder="data/raw/building_energy/1415/",
-                                                           output_folder="data/cleaned/building_energy/1415/",
-                                                           start_section='1/1/2014',
-                                                           end_section='31/12/2015')
+    # cleaned_dfs = data_cleaning.time_clean_building_energy(input_folder="data/raw/building_energy/1415/",
+    #                                                        output_folder="data/cleaned/building_energy/1415/",
+    #                                                        start_section='1/1/2014',
+    #                                                        end_section='31/12/2015')
     prepare_data("data/cleaned/building_energy/1415/",
-                 "data/weather1415.csv", "data/prepared/aggregated_1415/", cleaned_dfs=cleaned_dfs)
+                 "data/weather1415.csv", "data/prepared/aggregated_1415/")
     normalize_and_pickle_prepared_data()
 
 

@@ -17,11 +17,11 @@ class Ann(Model):
 
     def __init__(self, name, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
                  seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate, intermediates,
-                 load_weights_path=None, plot_loss=False):
+                 agg_level, load_weights_path=None, plot_loss=False):
 
         super().__init__(name, data_dict, batch_size, state_size, input_feature_amount, output_feature_amount,
                          seq_len_in, seq_len_out, plot_time_steps_view, steps_per_epoch, epochs, learning_rate,
-                         intermediates)
+                         intermediates, agg_level)
 
         # Build the model
         self.model = self.build_model()

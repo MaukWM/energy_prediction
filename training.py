@@ -16,7 +16,7 @@ data_50a_path = None
 data_25a_path = os.path.join(data_path, "aggregated_input_data-f83-ak25-b121.pkl")
 data_1a_path = None
 
-batch_size = 32
+batch_size = 512
 state_size = 32
 input_feature_amount = 83
 output_feature_amount = 1
@@ -80,7 +80,8 @@ if __name__ == "__main__":
                         learning_rate=learning_rate,
                         intermediates=intermediates,
                         plot_loss=plot_loss,
-                        load_weights_path=load_s2s_weights_path
+                        load_weights_path=load_s2s_weights_path,
+                        agg_level=agg_level
                         )
 
     elif to_train == "seq2seq_1dconv":
@@ -98,7 +99,8 @@ if __name__ == "__main__":
                             learning_rate=learning_rate,
                             intermediates=intermediates,
                             plot_loss=plot_loss,
-                            load_weights_path=load_s2s_1dconv_weights_path
+                            load_weights_path=load_s2s_1dconv_weights_path,
+                            agg_level=agg_level
                             )
     elif to_train == "ann":
         model = Ann(name="ann",
@@ -115,7 +117,8 @@ if __name__ == "__main__":
                     learning_rate=learning_rate,
                     intermediates=intermediates,
                     plot_loss=plot_loss,
-                    load_weights_path=load_ann_weights_path
+                    load_weights_path=load_ann_weights_path,
+                    agg_level=agg_level
                     )
 
     elif to_train == "seq2seq_attention":
@@ -133,7 +136,8 @@ if __name__ == "__main__":
                                  learning_rate=learning_rate,
                                  intermediates=intermediates,
                                  plot_loss=plot_loss,
-                                 load_weights_path=load_s2s_attention_weights_path
+                                 load_weights_path=load_s2s_attention_weights_path,
+                                 agg_level=agg_level
                                  )
 
     elif to_train == "seq2seq_1dconv_attention":
@@ -151,7 +155,8 @@ if __name__ == "__main__":
                                      learning_rate=learning_rate,
                                      intermediates=intermediates,
                                      plot_loss=plot_loss,
-                                     load_weights_path=load_s2s_1dconv_attention_weights_path
+                                     load_weights_path=load_s2s_1dconv_attention_weights_path,
+                                     agg_level=agg_level
                                      )
 
     else:

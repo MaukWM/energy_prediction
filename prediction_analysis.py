@@ -17,7 +17,7 @@ data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak75-b121.pkl")
 
 batch_size = 64
-state_size = 32
+state_size = 64
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
@@ -31,11 +31,11 @@ plot_loss = True
 
 load_weights = True
 if load_weights:
-    load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/ann-ss32-best_weights.h5"
-    load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq-ss32-best_weights.h5"
-    load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_1dconv-ss32-best_weights.h5"
-    load_s2s_attention_weights_path = None #"/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s-l0.00025-ss36-tl0.025-vl0.047-i96-o96-e2250-seq2seq.h5"
-    load_s2s_1dconv_attention_weights_path = None#"/home/mauk/Workspace/energy_prediction/models/first_time_training_much data/as2s1dc-l0.00025-ss36-tl0.020-vl0.038-i96-o96-e2250-seq2seq.h5"
+    load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/ann-ss64-best_weights.h5"
+    load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq-ss64-best_weights.h5"
+    load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_1dconv-ss64-best_weights.h5"
+    load_s2s_attention_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_attention-ss64-best_weights.h5"
+    load_s2s_1dconv_attention_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_1dconv_attention-ss64-best_weights.h5"
 else:
     load_ann_weights_path = None
     load_s2s_weights_path = None
@@ -89,7 +89,8 @@ def plot_loss_graph_validation(losses_dict_list):
     :param losses_dict_list: Dict containing validation losses
     """
     for loss_dict in losses_dict_list:
-        plt.plot(loss_dict['val_losses'][5:], label=loss_dict['name'])
+        if not loss_dict['name'] == "ann":
+            plt.plot(loss_dict['val_losses'][3:], label=loss_dict['name'])
     plt.legend()
     plt.title(label="validation losses")
     plt.show()
@@ -101,7 +102,8 @@ def plot_loss_graph_training(losses_dict_list):
     :param losses_dict_list: Dict containing validation losses
     """
     for loss_dict in losses_dict_list:
-        plt.plot(loss_dict['train_losses'][5:], label=loss_dict['name'])
+        if not loss_dict['name'] == "ann":
+            plt.plot(loss_dict['train_losses'][3:], label=loss_dict['name'])
     plt.legend()
     plt.title(label="training losses")
     plt.show()
@@ -287,9 +289,7 @@ if __name__ == "__main__":
 
     losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
 
-    # print(losses_dict)
-
-    # plot_loss_graph_single_model(losses_dict[0])
+    plot_random_sample(models)
 
     plot_loss_graph_validation(losses_dict)
     plot_loss_graph_training(losses_dict)

@@ -10,7 +10,7 @@ class Model:
 
     def __init__(self, name, data_dict, batch_size=256, state_size=42, input_feature_amount=83, output_feature_amount=1,
                  seq_len_in=96, seq_len_out=96, plot_time_steps_view=192, steps_per_epoch=100, epochs=50,
-                 learning_rate=0.00075, intermediates=1):
+                 learning_rate=0.00075, intermediates=1, agg_level="UNK"):
         self.batch_size = batch_size
         self.state_size = state_size
         self.input_feature_amount = input_feature_amount
@@ -24,6 +24,7 @@ class Model:
         self.output_mean = data_dict['output_mean']
         self.name = name
         self.test_train_ratio = 0.5
+        self.agg_level = agg_level
 
         # Generate the validation data
         self.validation_data = self.generate_validation_data()
@@ -261,7 +262,8 @@ class Model:
         train_losses = []
 
         # Path to save best model
-        model_saving_filepath = self.name + "-ss" + str(self.state_size) + "-best_weights.h5"
+        # model_saving_filepath = self.name + "-e{epoch:04d}-ss" + str(self.state_size) + "-vl{val_loss:.5f}.h5"
+        model_saving_filepath = self.name + "-ss" + str(self.state_size) + "-agg" + self.agg_level + "-best_weights.h5"
 
         from keras.losses import mean_squared_error
         if "attention" in self.name:
@@ -281,9 +283,7 @@ class Model:
 
         history = None
 
-        # Set checkpoint for saving the best model
-        # model_saving_filepath = self.name + "-e{epoch:04d}-ss" + str(self.state_size) + "-vl{val_loss:.5f}.h5"
-
+        # Set checkpoint for saving model
         callbacks_list = [checkpoint]
 
         for i in range(self.intermediates):
@@ -322,9 +322,10 @@ class Model:
                 plt.show()
 
         # Write file with history of loss
-        history_file = open("history-{0}-minvl{1:.4f}-minl{2:.4f}.pkl".format(self.name,
-                                                                              np.amin(val_losses),
-                                                                              np.amin(train_losses)), "wb")
+        history_file = open("history-agg{0}-{1}-minvl{2:.4f}-minl{3:.4f}.pkl".format(self.name,
+                                                                                     self.agg_level,
+                                                                                     np.amin(val_losses),
+                                                                                     np.amin(train_losses)), "wb")
         pickle.dump({"name": self.name, "train_losses": train_losses, "val_losses": val_losses}, history_file)
 
         # Return the history of the training session
