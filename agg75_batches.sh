@@ -1,7 +1,14 @@
 #!/bin/sh
-training_scripts/sbatch_training_job_agg75_ann.sh
-training_scripts/sbatch_training_job_agg75_s2s.sh
-training_scripts/sbatch_training_job_agg75_s2s_1dconv.sh
-training_scripts/sbatch_training_job_agg75_s2s_1dconv_attention.sh
-training_scripts/sbatch_training_job_agg75_s2s_attention.sh
-
+#SBATCH -J agg_75_training
+#SBATCH -N 1
+#SBATCH -n 5
+#SBATCH -c 2
+#SBATCH --mem 75000M
+#SBATCH --gres=gpu:1
+#SBATCH --mail-type=END,FAIL
+srun python3 -m training ann 75 &
+srun python3 -m training seq2seq 75 &
+srun python3 -m training seq2seq_1dconv 75 &
+srun python3 -m training seq2seq_attention 75 &
+srun python3 -m training seq2seq_1dconv_attention 75
+wait

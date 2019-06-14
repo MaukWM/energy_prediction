@@ -12,11 +12,11 @@ from utils import load_data
 data_path = "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/"
 
 data_75a_path = os.path.join(data_path, "aggregated_input_data-f83-ak75-b121.pkl")
-data_50a_path = None
+data_50a_path = os.path.join(data_path, "aggregated_input_data-f83-ak50-b121.pkl")
 data_25a_path = os.path.join(data_path, "aggregated_input_data-f83-ak25-b121.pkl")
-data_1a_path = None
+data_1a_path = os.path.join(data_path, "aggregated_input_data-f83-ak1-b121.pkl")
 
-batch_size = 512
+batch_size = 128
 state_size = 32
 input_feature_amount = 83
 output_feature_amount = 1
@@ -25,7 +25,7 @@ seq_len_out = 96
 plot_time_steps_view = 96 * 2
 steps_per_epoch = 50
 epochs = 200
-learning_rate = 0.00075
+learning_rate = 0.00055
 intermediates = 1
 plot_loss = False
 
