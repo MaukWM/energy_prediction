@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH -J ann_training 1
+#SBATCH -J ann_training_1
 #SBATCH -c 16
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=END,FAIL
