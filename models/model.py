@@ -292,24 +292,11 @@ class Model:
                                                    steps_per_epoch=self.steps_per_epoch, epochs=self.epochs,
                                                    validation_data=self.validation_data, callbacks=callbacks_list)
 
-                # self.model.save_weights(
-                #     self.name + "-l{0}-ss{1}-tl{2:.4f}-vl{3:.4f}-i{4}-o{5}.h5".format(str(self.learning_rate),
-                #                                                               str(self.state_size),
-                #                                                               history.history['loss'][-1],
-                #                                                               history.history['val_loss'][-1],
-                #                                                               self.seq_len_in,
-                #                                                               self.seq_len_out))
-
                 val_losses.extend(history.history['val_loss'])
                 train_losses.extend(history.history['loss'])
 
                 histories.append(history)
             except KeyboardInterrupt:
-                # self.model.save_weights(
-                #     self.name + "-l{0}-ss{1}-interrupted-i{2}-o{3}.h5".format(str(self.learning_rate),
-                #                                                       str(self.state_size),
-                #                                                       self.seq_len_in,
-                #                                                       self.seq_len_out))
                 print("Training interrupted!")
 
             # If given, plot the loss
@@ -322,11 +309,11 @@ class Model:
                 plt.show()
 
         # Write file with history of loss
-        history_file = open("history-agg{0}-{1}-minvl{2:.4f}-minl{3:.4f}.pkl".format(self.name,
-                                                                                     self.agg_level,
+        history_file = open("history-agg{0}-{1}-minvl{2:.4f}-minl{3:.4f}.pkl".format(self.agg_level,
+                                                                                     self.name,
                                                                                      np.amin(val_losses),
                                                                                      np.amin(train_losses)), "wb")
-        pickle.dump({"name": self.name, "train_losses": train_losses, "val_losses": val_losses}, history_file)
+        pickle.dump({"name": "{0}-agg{1}".format(self.name, self.agg_level), "train_losses": train_losses, "val_losses": val_losses}, history_file)
 
         # Return the history of the training session
         return histories

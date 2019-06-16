@@ -12,9 +12,6 @@ from utils import load_data, denormalize
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Load data
-data_dict = load_data(
-    "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak1-b121.pkl")
 
 batch_size = 64
 state_size = 32
@@ -30,13 +27,17 @@ intermediates = 1
 agg_level = 1
 plot_loss = True
 
+# Load data
+data_dict = load_data(
+    "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak{}-b121.pkl".format(agg_level))
+
 load_weights = True
 if load_weights:
-    load_ann_weights_path = "ann-ss32-agg1-best_weights.h5"
-    load_s2s_weights_path = "seq2seq-ss32-agg1-best_weights.h5"
-    load_s2s_1dconv_weights_path = "seq2seq_1dconv-ss32-agg1-best_weights.h5"
-    load_s2s_attention_weights_path = "seq2seq_attention-ss32-agg1-best_weights.h5"
-    load_s2s_1dconv_attention_weights_path = "seq2seq_1dconv_attention-ss32-agg1-best_weights.h5"
+    load_ann_weights_path = "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
+    load_s2s_weights_path = "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
+    load_s2s_1dconv_weights_path = "seq2seq_1dconv-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
+    load_s2s_attention_weights_path = "seq2seq_attention-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
+    load_s2s_1dconv_attention_weights_path = "seq2seq_1dconv_attention-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
 else:
     load_ann_weights_path = None
     load_s2s_weights_path = None
@@ -84,7 +85,7 @@ def plot_loss_graph_single_model(losses_dict):
     plt.show()
 
 
-def plot_loss_graph_validation(losses_dict_list):
+def plot_loss_graph_validation(losses_dict_list, agg_level=None):
     """
     Plot all validation losses from a losses dict
     :param losses_dict_list: Dict containing validation losses
@@ -97,7 +98,7 @@ def plot_loss_graph_validation(losses_dict_list):
     plt.show()
 
 
-def plot_loss_graph_training(losses_dict_list):
+def plot_loss_graph_training(losses_dict_list, agg_level=None):
     """
     Plot all training losses from a losses dict
     :param losses_dict_list: Dict containing validation losses
@@ -293,7 +294,7 @@ if __name__ == "__main__":
 
     print_nrmse_models(models)
 
-    losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
+    losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/") #TODO: add agg level optional argument
 
     plot_random_sample(models)
 
