@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH -J seq2seq_1dconv_training
+#SBATCH -J seq2seq_1dconv_training 50
 #SBATCH -c 16
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=END,FAIL

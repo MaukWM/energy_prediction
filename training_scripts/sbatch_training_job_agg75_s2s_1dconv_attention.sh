@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH -J seq2seq_1dconv_attention_training
+#SBATCH -J seq2seq_1dconv_attention_training 75
 #SBATCH -c 24
 #SBATCH --gres=gpu:1
 #SBATCH --mail-type=END,FAIL
