@@ -14,10 +14,10 @@ import numpy as np
 
 # Load data
 data_dict = load_data(
-    "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak75-b121.pkl")
+    "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak1-b121.pkl")
 
 batch_size = 64
-state_size = 64
+state_size = 32
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
@@ -27,15 +27,16 @@ steps_per_epoch = 10
 epochs = 40
 learning_rate = 0.00075
 intermediates = 1
+agg_level = 1
 plot_loss = True
 
 load_weights = True
 if load_weights:
-    load_ann_weights_path = "/home/mauk/Workspace/energy_prediction/ann-ss64-best_weights.h5"
-    load_s2s_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq-ss64-best_weights.h5"
-    load_s2s_1dconv_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_1dconv-ss64-best_weights.h5"
-    load_s2s_attention_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_attention-ss64-best_weights.h5"
-    load_s2s_1dconv_attention_weights_path = "/home/mauk/Workspace/energy_prediction/seq2seq_1dconv_attention-ss64-best_weights.h5"
+    load_ann_weights_path = "ann-ss32-agg1-best_weights.h5"
+    load_s2s_weights_path = "seq2seq-ss32-agg1-best_weights.h5"
+    load_s2s_1dconv_weights_path = "seq2seq_1dconv-ss32-agg1-best_weights.h5"
+    load_s2s_attention_weights_path = "seq2seq_attention-ss32-agg1-best_weights.h5"
+    load_s2s_1dconv_attention_weights_path = "seq2seq_1dconv_attention-ss32-agg1-best_weights.h5"
 else:
     load_ann_weights_path = None
     load_s2s_weights_path = None
@@ -204,7 +205,8 @@ if __name__ == "__main__":
                       learning_rate=learning_rate,
                       intermediates=intermediates,
                       plot_loss=plot_loss,
-                      load_weights_path=load_s2s_weights_path
+                      load_weights_path=load_s2s_weights_path,
+                      agg_level=agg_level
                       )
 
     seq2seq_1dconv = Seq2SeqConv(name="seq2seq_1dconv",
@@ -221,7 +223,8 @@ if __name__ == "__main__":
                                  learning_rate=learning_rate,
                                  intermediates=intermediates,
                                  plot_loss=plot_loss,
-                                 load_weights_path=load_s2s_1dconv_weights_path
+                                 load_weights_path=load_s2s_1dconv_weights_path,
+                                 agg_level=agg_level
                                  )
 
     ann = Ann(name="ann",
@@ -238,7 +241,8 @@ if __name__ == "__main__":
               learning_rate=learning_rate,
               intermediates=intermediates,
               plot_loss=plot_loss,
-              load_weights_path=load_ann_weights_path
+              load_weights_path=load_ann_weights_path,
+              agg_level=agg_level
               )
 
     seq2seq_attention = Seq2SeqAttention(name="seq2seq_attention",
@@ -255,7 +259,8 @@ if __name__ == "__main__":
                                          learning_rate=learning_rate,
                                          intermediates=intermediates,
                                          plot_loss=plot_loss,
-                                         load_weights_path=load_s2s_attention_weights_path
+                                         load_weights_path=load_s2s_attention_weights_path,
+                                         agg_level=agg_level
                                          )
 
     seq2seq_1dconv_attention = Seq2SeqConvAttention(name="seq2seq_1dconv_attention",
@@ -272,7 +277,8 @@ if __name__ == "__main__":
                                                     learning_rate=learning_rate,
                                                     intermediates=intermediates,
                                                     plot_loss=plot_loss,
-                                                    load_weights_path=load_s2s_1dconv_attention_weights_path
+                                                    load_weights_path=load_s2s_1dconv_attention_weights_path,
+                                                    agg_level=agg_level
                                                     )
 
     models.append(seq2seq_attention)
