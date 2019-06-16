@@ -24,8 +24,8 @@ seq_len_in = 96
 seq_len_out = 96
 plot_time_steps_view = 96 * 2
 steps_per_epoch = 50
-epochs = 200
-learning_rate = 0.00055
+epochs = 100
+learning_rate = 0.00045
 intermediates = 1
 plot_loss = False
 
