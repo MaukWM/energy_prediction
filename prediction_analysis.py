@@ -12,6 +12,8 @@ from utils import load_data, denormalize
 import matplotlib.pyplot as plt
 import numpy as np
 
+agg_levels = [1, 25, 50, 75]
+start_point_loss_graph = 25
 
 batch_size = 64
 state_size = 32
@@ -31,7 +33,7 @@ plot_loss = True
 data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak{}-b121.pkl".format(agg_level))
 
-load_weights = True
+load_weights = False
 if load_weights:
     load_ann_weights_path = "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
     load_s2s_weights_path = "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
@@ -85,27 +87,41 @@ def plot_loss_graph_single_model(losses_dict):
     plt.show()
 
 
-def plot_loss_graph_validation(losses_dict_list, agg_level=None):
+def plot_loss_graph_validation(losses_dict_list, agg_lvl=None, plot_ann=False):
     """
     Plot all validation losses from a losses dict
     :param losses_dict_list: Dict containing validation losses
     """
     for loss_dict in losses_dict_list:
-        if not loss_dict['name'] == "ann":
-            plt.plot(loss_dict['val_losses'][3:], label=loss_dict['name'])
+        if agg_lvl:
+            if str(agg_lvl) in loss_dict['name'].split("-")[1]:
+                if "ann" in loss_dict['name'] and not plot_ann:
+                    continue
+                plt.plot(loss_dict['val_losses'][start_point_loss_graph:], label=loss_dict['name'])
+        else:
+            if "ann" in loss_dict['name'] and not plot_ann:
+                continue
+            plt.plot(loss_dict['val_losses'][start_point_loss_graph:], label=loss_dict['name'])
     plt.legend()
     plt.title(label="validation losses")
     plt.show()
 
 
-def plot_loss_graph_training(losses_dict_list, agg_level=None):
+def plot_loss_graph_training(losses_dict_list, agg_lvl=None, plot_ann=False):
     """
     Plot all training losses from a losses dict
     :param losses_dict_list: Dict containing validation losses
     """
     for loss_dict in losses_dict_list:
-        if not loss_dict['name'] == "ann":
-            plt.plot(loss_dict['train_losses'][3:], label=loss_dict['name'])
+        if agg_lvl:
+            if str(agg_lvl) in loss_dict['name'].split("-")[1]:
+                if "ann" in loss_dict['name'] and not plot_ann:
+                    continue
+                plt.plot(loss_dict['train_losses'][start_point_loss_graph:], label=loss_dict['name'])
+        else:
+            if "ann" in loss_dict['name'] and not plot_ann:
+                continue
+            plt.plot(loss_dict['train_losses'][start_point_loss_graph:], label=loss_dict['name'])
     plt.legend()
     plt.title(label="training losses")
     plt.show()
@@ -288,15 +304,19 @@ if __name__ == "__main__":
     models.append(seq2seq_1dconv)
     models.append(ann)
 
+    for model in models:
+        model.model.summary()
+
     # train_models(models)
 
-    predict_x_batches, predict_y_batches, predict_y_batches_prev = seq2seq.create_validation_sample()
+    # predict_x_batches, predict_y_batches, predict_y_batches_prev = seq2seq.create_validation_sample()
+    #
+    # print_nrmse_models(models)
 
-    print_nrmse_models(models)
+    # losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
 
-    losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/") #TODO: add agg level optional argument
+    # plot_random_sample(models)
 
-    plot_random_sample(models)
-
-    plot_loss_graph_validation(losses_dict)
-    plot_loss_graph_training(losses_dict)
+    # for agg_lvl in agg_levels:
+    #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
+    #     plot_loss_graph_training(losses_dict, agg_lvl=agg_lvl, plot_ann=False)

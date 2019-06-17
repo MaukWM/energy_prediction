@@ -38,12 +38,11 @@ class Seq2SeqConv(Model):
         x_enc = ks.Input(shape=(self.seq_len_in, self.input_feature_amount), name="x_enc")
         x_dec = ks.Input(shape=(None, self.output_feature_amount), name="x_dec")
 
-        input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=7, strides=2, activation='relu')(x_enc)
-        input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=5, strides=1, activation='relu')(input_conv2)
-        input_conv = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu')(input_conv1)
+        input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=5, strides=2, activation='relu', padding='same')(x_enc)
+        input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', padding='same')(input_conv2)
 
         # Define the encoder GRU, which only has to return a state
-        _, state = ks.layers.GRU(self.state_size, return_state=True)(input_conv)
+        _, state = ks.layers.GRU(self.state_size, return_state=True)(input_conv1)
 
         # Define the decoder GRU and the Dense layer that will transform sequences of size 20 vectors to
         # a sequence of 1-long vectors of final predicted values
