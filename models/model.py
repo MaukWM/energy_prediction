@@ -207,6 +207,44 @@ class Model:
 
         return [batch_xe, batch_xd], batch_y, batch_y_prev
 
+    def create_validation_data_with_prev_y_steps(self, slice_point=1500):
+        """
+        Generate validation data of the whole testing set on a slicing point, including the previous y steps.
+        :return: the validation data: [input encoder, input decoder], output_decoder
+        """
+        test_xe_batches = []
+        test_xd_batches = []
+        test_y_batches = []
+        test_y_batches_prev = []
+
+        # Split into testing set
+        if hasattr(self.normalized_input_data, 'shape') and hasattr(self.normalized_output_data, 'shape'):
+            test_x = self.normalized_input_data[:, -self.normalized_input_data.shape[1] // int((1 / self.test_train_ratio)):]
+            test_y = self.normalized_output_data[:, -self.normalized_output_data.shape[1] // int((1 / self.test_train_ratio)):]
+        else:
+            test_x = []
+            test_y = []
+            for building in self.normalized_input_data:
+                test_x.append(building[-int(np.shape(building)[0] * self.test_train_ratio):])
+            for building in self.normalized_output_data:
+                test_y.append(building[-int(np.shape(building)[0] * self.test_train_ratio):])
+
+        for i in range(len(test_x)):
+            for j in range(len(test_x[i]) - self.seq_len_out - self.seq_len_in):
+                #  Change modulo operation to change interval
+                if j % slice_point == 0:
+                    test_xe_batches.append(test_x[i][j:j+self.seq_len_in])
+                    test_xd_batches.append(test_y[i][j+self.seq_len_in - 1:j+self.seq_len_in+self.seq_len_out - 1])
+                    test_y_batches.append(test_y[i][j + self.seq_len_in:j + self.seq_len_in + self.seq_len_out])
+                    test_y_batches_prev.append(test_y[i][j:j + self.seq_len_in])
+
+        test_xe_batches = np.stack(test_xe_batches, axis=0)
+        test_xd_batches = np.stack(test_xd_batches, axis=0)
+        test_y_batches = np.stack(test_y_batches, axis=0)
+        test_y_batches_prev = np.stack(test_y_batches_prev, axis=0)
+
+        return test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev
+
     def create_training_sample(self):
         """
         Create a single training sample

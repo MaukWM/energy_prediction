@@ -1,8 +1,11 @@
+import datetime
 import os
 import random
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+from matplotlib.dates import HourLocator, DateFormatter
 
 day = 96
 week = day * 7
@@ -27,6 +30,34 @@ def visualize_data(path_to_data):
             plt.show()
         except TypeError:
             print("Warning, type error in " + column)
+
+
+def visualize_column_24hour(path_to_data, column_name):
+    df = pd.read_csv(path_to_data)
+    start_points = np.arange(0, len(df.index), 96)
+    sp = start_points[random.randint(0, len(start_points) - 1)]
+    df = df[sp:sp+day+1]
+
+    df = df.loc[:, (df != 0).any(axis=0)]
+
+    customdate = datetime.datetime(2016, 1, 1, 0, 0)
+
+    y = df[column_name]
+    x = [customdate + datetime.timedelta(minutes=15*i) for i in range(len(y))]
+
+    ax = plt.subplot()
+
+    ax.plot(x, y, color='black', linewidth=0.6)
+    ax.xaxis.set_major_locator(HourLocator(interval=3))
+    ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+    ax.xaxis.set_ticks([customdate + datetime.timedelta(hours=i*3) for i in range(int(24 / 3) + 1)])
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Energy use")
+
+    # beautify the x-labels
+    # plt.gcf().autofmt_xdate()
+
+    plt.show()
 
 
 def visualize_column(path_to_data, column_name):
@@ -79,10 +110,11 @@ def visualize_column_on_interval(path_to_data, column_name):
         plt.show()
         sp = sp + time_range
 
-
 # visualize_column_from_multiple("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/", "use", size_data=size_data)
 # visualize_data("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-0.csv")
-visualize_column("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-24.csv", "use")
+# visualize_column("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-24.csv", "use")
+# visualize_column_on_interval("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-24.csv", "use")
+visualize_column_24hour("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/agg121-p/p-agg-0.csv", "use")
 # visualize_column("/home/mauk/Workspace/energy_prediction/data/raw/building_energy/1415/2242-building_data-1415.csv", "use")
 # visualize_column_on_interval("/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/p-agg-35.csv", "use")
 # visualize_column_from_multiple("/home/mauk/Workspace/energy_prediction/data/raw/building_energy/1415/", "use", size_data=size_data)

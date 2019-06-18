@@ -17,7 +17,7 @@ days_in_week = 7
 months_in_year = 12
 
 # Aggregation_kernel_size
-aggregation_kernel_size = 1
+aggregation_kernel_size = 121
 
 # When changing this also change in data_cleaning.py
 column_data_to_predict, column_data_to_predict_name = [0], 'use'  # 0 is use column, 28 is grid column

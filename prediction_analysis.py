@@ -26,14 +26,14 @@ steps_per_epoch = 10
 epochs = 40
 learning_rate = 0.00075
 intermediates = 1
-agg_level = 1
+agg_level = 75
 plot_loss = True
 
 # Load data
 data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak{}-b121.pkl".format(agg_level))
 
-load_weights = False
+load_weights = True
 if load_weights:
     load_ann_weights_path = "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
     load_s2s_weights_path = "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
@@ -204,6 +204,63 @@ def print_nrmse_models(models):
         print(model.name + " nrmse: {0:.2f}%".format(nrmses[model] * 100))
 
 
+def calculate_accuracy_per_time_step(models, plot=True, save=True):
+    """
+    Plot the accuracy of each model for each timestep and plot it.
+    :param models: The models
+    :return Dict containing the average RMSE of each model for each timestep.
+    """
+    test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=322)
+
+    rmse_dict = {}
+
+    # Initiate dict containing the rmses
+    for model in models:
+        rmse_dict[model.name] = []
+
+    print("Total datapoints to process:", len(test_xe_batches))
+    update_point = int(len(test_xe_batches) / 10)
+    for i in range(len(test_xe_batches)):
+        if i % update_point == 0:
+            print("Processing datapoint", i)
+        # Reshape into batch
+        test_xe_batches_inf = np.reshape(test_xe_batches[i], newshape=(1, seq_len_in, input_feature_amount))
+        test_xd_batches_inf = np.reshape(test_xd_batches[i], newshape=(1, seq_len_in, output_feature_amount))
+        test_y_batches_inf = np.reshape(test_y_batches[i], newshape=(1, seq_len_out, output_feature_amount))
+
+        normalized_ys = test_y_batches[i]
+        ys = denormalize(normalized_ys, data_dict['output_std'], data_dict['output_mean'])
+
+        for model in models:
+            prediction = model.predict(test_xe_batches_inf, test_xd_batches_inf, test_y_batches_inf,
+                                       test_y_batches_prev[i], plot=False)
+            denormalized_prediction = denormalize(prediction, data_dict['output_std'], data_dict['output_mean'])
+
+            rmse_result = []
+            rmse_result.append(np.sqrt(np.square(ys - denormalized_prediction)))
+            rmse_dict[model.name].append(rmse_result)
+
+    for model in rmse_dict.keys():
+        rmse_dict[model] = np.average(rmse_dict[model], axis=0)
+
+    if save:
+        out_file = open("avg_rmse_timesteps-agg{}.pkl".format(agg_level), "wb")
+        pickle.dump(rmse_dict, out_file)
+
+    if plot:
+        plt.title("RMSE for {}".format(agg_level))
+        plt.xlabel("Timestep (15 min)")
+        plt.ylabel("Average RMSE")
+
+        for model in rmse_dict.keys():
+            plt.plot(rmse_dict[model][0], label=model)
+
+        plt.legend()
+        plt.show()
+
+    return rmse_dict
+
+
 if __name__ == "__main__":
     # Init models
     models = []
@@ -304,19 +361,17 @@ if __name__ == "__main__":
     models.append(seq2seq_1dconv)
     models.append(ann)
 
-    for model in models:
-        model.model.summary()
+    calculate_accuracy_per_time_step(models)
 
-    # train_models(models)
-
-    # predict_x_batches, predict_y_batches, predict_y_batches_prev = seq2seq.create_validation_sample()
+    # for model in models:
+    #     model.model.summary()
     #
     # print_nrmse_models(models)
-
+    #
     # losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
-
+    #
     # plot_random_sample(models)
-
+    #
     # for agg_lvl in agg_levels:
     #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
     #     plot_loss_graph_training(losses_dict, agg_lvl=agg_lvl, plot_ann=False)

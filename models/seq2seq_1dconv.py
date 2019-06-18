@@ -97,7 +97,7 @@ class Seq2SeqConv(Model):
         # So we take the 0th element from the batch which are our outputs
         return np.concatenate(outputs, axis=1)[0]
 
-    def predict(self, enc_input, dec_input, actual_output, prev_output):
+    def predict(self, enc_input, dec_input, actual_output, prev_output, plot=True):
         """
         Make a prediction and plot the result
         :param enc_input: Input for the encoder
@@ -116,13 +116,14 @@ class Seq2SeqConv(Model):
         ys = denormalize(normalized_ys, self.output_std, self.output_mean)
         predictions = denormalize(normalized_predictions, self.output_std, self.output_mean)
 
-        # Plot them
-        plt.plot(range(0, self.plot_time_steps_view), ys, label="real")
-        plt.plot(range(self.plot_time_steps_view - self.seq_len_out, self.plot_time_steps_view), predictions,
-                 label="predicted")
-        plt.legend()
-        plt.title(label="seq2seq_1dconv")
-        plt.show()
+        if plot:
+            # Plot them
+            plt.plot(range(0, self.plot_time_steps_view), ys, label="real")
+            plt.plot(range(self.plot_time_steps_view - self.seq_len_out, self.plot_time_steps_view), predictions,
+                     label="predicted")
+            plt.legend()
+            plt.title(label="seq2seq_1dconv")
+            plt.show()
 
         return normalized_predictions
 
