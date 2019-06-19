@@ -21,25 +21,6 @@ def load_data(pkl_path=None):
     print("ERROR: Pickle file was not found!")
 
 
-# TODO: Remove redundant code
-def load_data_normalized(pkl_path=None):
-    """
-    Returns input and output data with info on output normalization to denormalize
-    :param pkl_path: Path to pkl file
-    :return: Dict with normalized input data and output data and factors to denormalize output
-    """
-    if pkl_path:
-        input_data = open(pkl_path, "rb")
-        return pickle.load(input_data)
-    start_dir = "../.."
-    pkl_data = "input_data.pkl"
-    for root, dirs, files in os.walk(start_dir):
-        if pkl_data in files:
-            input_data = open(os.path.join(root, pkl_data), "rb")
-            return pickle.load(input_data)
-    print("ERROR: Pickle file was not found!")
-
-
 def denormalize(to_denormalize, std, mean):
     """
     Denormalize an array

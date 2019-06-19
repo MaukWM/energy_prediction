@@ -1,3 +1,4 @@
+import math
 import os
 import pickle
 
@@ -26,7 +27,7 @@ steps_per_epoch = 10
 epochs = 40
 learning_rate = 0.00075
 intermediates = 1
-agg_level = 75
+agg_level = 1
 plot_loss = True
 
 # Load data
@@ -204,6 +205,48 @@ def print_nrmse_models(models):
         print(model.name + " nrmse: {0:.2f}%".format(nrmses[model] * 100))
 
 
+def predict_all_validation_data(models, save=True):
+    """
+    Make predictions over the validation data, saving the predicted value and actual value
+    :param models: The models
+    :return Dict containing the predicted and actual values of the all datapoints in the validation data
+    """
+    test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=20000)
+
+    values_dict = dict()
+
+    # Initialize dict
+    for model in models:
+        values_dict[model.name] = []
+
+    print("Total datapoints to process:", len(test_xe_batches))
+    update_point = int(len(test_xe_batches) / 10)
+    for i in range(len(test_xe_batches)):
+        if i % update_point == 0:
+            print("Processing datapoint", i)
+        # Reshape into batch
+        test_xe_batches_inf = np.reshape(test_xe_batches[i], newshape=(1, seq_len_in, input_feature_amount))
+        test_xd_batches_inf = np.reshape(test_xd_batches[i], newshape=(1, seq_len_in, output_feature_amount))
+        test_y_batches_inf = np.reshape(test_y_batches[i], newshape=(1, seq_len_out, output_feature_amount))
+
+        normalized_ys = test_y_batches[i]
+        ys = denormalize(normalized_ys, data_dict['output_std'], data_dict['output_mean'])
+
+        for model in models:
+            prediction = model.predict(test_xe_batches_inf, test_xd_batches_inf, test_y_batches_inf,
+                                       test_y_batches_prev[i], plot=False)
+            denormalized_prediction = denormalize(prediction, data_dict['output_std'], data_dict['output_mean'])
+
+            result = (denormalized_prediction, ys)
+            values_dict[model.name].append(result)
+
+    if save:
+        out_file = open("predicted_and_actuals-agg{}.pkl".format(agg_level), "wb")
+        pickle.dump(values_dict, out_file)
+
+    return values_dict
+
+
 def calculate_accuracy_per_time_step(models, plot=True, save=True):
     """
     Plot the accuracy of each model for each timestep and plot it.
@@ -214,7 +257,7 @@ def calculate_accuracy_per_time_step(models, plot=True, save=True):
 
     rmse_dict = {}
 
-    # Initiate dict containing the rmses
+    # Initialize dict containing the rmses
     for model in models:
         rmse_dict[model.name] = []
 
@@ -259,6 +302,76 @@ def calculate_accuracy_per_time_step(models, plot=True, save=True):
         plt.show()
 
     return rmse_dict
+
+
+def plot_accuracy_per_time_step(path_to_rmse_dict):
+    """
+    Plot the RMSE per timestep given the path to the dict location
+    :param path_to_rmse_dict: Path to RMSE dict
+    """
+    data_tmp = open(path_to_rmse_dict, "rb")
+    rmse_dict = pickle.load(data_tmp)
+
+    plt.title("RMSE for aggregation level {}".format(agg_level))
+    plt.xlabel("Timestep (15 min)")
+    plt.ylabel("Average RMSE")
+
+    for model in rmse_dict.keys():
+        plt.plot(rmse_dict[model][0], label=model)
+
+    plt.legend()
+    plt.show()
+
+
+def print_accuracy_measures(predictions, actuals):
+    """
+    Print the results of all accuracy measures, given the predictions and actuals
+    :param predictions: Predictions
+    :param actuals: Actuals
+    """
+    # Stack the lists to make them numpy arrays
+    predictions = np.stack(predictions)
+    actuals = np.stack(actuals)
+
+    # Get total amount of observations
+    n = np.size(predictions)
+
+    # Mean error
+    me = np.sum(predictions - actuals) / n
+    print("ME: {0:.2f}".format(me))
+
+    # Root mean squared error
+    rmse = math.sqrt(np.sum(np.square(predictions - actuals)) / n)
+    print("RMSE: {0:.2f}".format(rmse))
+
+    # Mean absolute error
+    mae = np.sum(abs(predictions - actuals)) / n
+    print("MAE: {0:.2f}".format(mae))
+
+
+def analyze_predicted_and_actuals(path_to_data_folder):
+    """
+    Analyze predicted and actual values by calculating the values of some metrics
+    :param path_to_data_folder: Path to data folder
+    """
+    pred_act_dict = dict()
+    for filename in os.listdir(path_to_data_folder):
+        if "predicted_and_actuals" in filename:
+            data_tmp = open(os.path.join(path_to_data_folder, filename), "rb")
+            # Ugly way to extract agg_level from filename
+            agg_level = filename.split("-")[1].split(".")[0][3:]
+            data = pickle.load(data_tmp)
+            pred_act_dict[agg_level] = data
+
+    for pred_act_agg_level in pred_act_dict.keys():
+        for model in pred_act_dict[pred_act_agg_level]:
+            predictions = []
+            actuals = []
+            for data_point in pred_act_dict[pred_act_agg_level][model]:
+                predictions.append(data_point[0])
+                actuals.append(data_point[1])
+            print("Accuracy measures for {} with {} aggregation".format(model, pred_act_agg_level))
+            print_accuracy_measures(predictions, actuals)
 
 
 if __name__ == "__main__":
@@ -361,7 +474,13 @@ if __name__ == "__main__":
     models.append(seq2seq_1dconv)
     models.append(ann)
 
-    calculate_accuracy_per_time_step(models)
+    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg75.pkl")
+
+    # calculate_accuracy_per_time_step(models)
+
+    # predict_all_validation_data(models)
+    
+    # analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
 
     # for model in models:
     #     model.model.summary()
