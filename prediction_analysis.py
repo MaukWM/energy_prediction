@@ -211,7 +211,8 @@ def predict_all_validation_data(models, save=True):
     :param models: The models
     :return Dict containing the predicted and actual values of the all datapoints in the validation data
     """
-    test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=20000)
+    slicing_point = 322*2
+    test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=slicing_point)
 
     values_dict = dict()
 
@@ -219,7 +220,7 @@ def predict_all_validation_data(models, save=True):
     for model in models:
         values_dict[model.name] = []
 
-    print("Total datapoints to process:", len(test_xe_batches))
+    print("Total datapoints to process with slicing point {}:".format(slicing_point), len(test_xe_batches))
     update_point = int(len(test_xe_batches) / 10)
     for i in range(len(test_xe_batches)):
         if i % update_point == 0:
@@ -241,7 +242,7 @@ def predict_all_validation_data(models, save=True):
             values_dict[model.name].append(result)
 
     if save:
-        out_file = open("predicted_and_actuals-agg{}.pkl".format(agg_level), "wb")
+        out_file = open("predicted_and_actuals-agg{}-sp{}.pkl".format(agg_level, slicing_point), "wb")
         pickle.dump(values_dict, out_file)
 
     return values_dict
@@ -253,7 +254,8 @@ def calculate_accuracy_per_time_step(models, plot=True, save=True):
     :param models: The models
     :return Dict containing the average RMSE of each model for each timestep.
     """
-    test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=322)
+    slicing_point = 322*2
+    test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=slicing_point)
 
     rmse_dict = {}
 
@@ -261,7 +263,7 @@ def calculate_accuracy_per_time_step(models, plot=True, save=True):
     for model in models:
         rmse_dict[model.name] = []
 
-    print("Total datapoints to process:", len(test_xe_batches))
+    print("Total datapoints to process with slicing point {}:".format(slicing_point), len(test_xe_batches))
     update_point = int(len(test_xe_batches) / 10)
     for i in range(len(test_xe_batches)):
         if i % update_point == 0:
@@ -287,7 +289,7 @@ def calculate_accuracy_per_time_step(models, plot=True, save=True):
         rmse_dict[model] = np.average(rmse_dict[model], axis=0)
 
     if save:
-        out_file = open("avg_rmse_timesteps-agg{}.pkl".format(agg_level), "wb")
+        out_file = open("avg_rmse_timesteps-agg{}-sp{}.pkl".format(agg_level, slicing_point), "wb")
         pickle.dump(rmse_dict, out_file)
 
     if plot:
@@ -478,7 +480,7 @@ if __name__ == "__main__":
 
     # calculate_accuracy_per_time_step(models)
 
-    # predict_all_validation_data(models)
+    predict_all_validation_data(models)
     
     # analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
 
