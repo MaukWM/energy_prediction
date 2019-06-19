@@ -162,7 +162,7 @@ class Model:
 
         return [batch_xe, batch_xd], batch_y
 
-    def create_validation_sample(self):
+    def create_validation_sample(self, is_start_of_day=False):
         """
         Create a single validation sample, can be used to make predictions
         :return: Validation sample
@@ -189,8 +189,14 @@ class Model:
         # Select a random building from the training set
         bd = np.random.randint(0, len(test_x))
 
-        # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
-        sp = np.random.randint(0, len(test_x[bd]) - self.seq_len_in - self.seq_len_out)
+        if is_start_of_day:
+            # Grab a random starting point at the start of the day
+            start_points = np.arange(0, len(test_x[0]), 96)
+            sp = start_points[np.random.randint(0, len(start_points) - 1)]
+            print(sp)
+        else:
+            # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
+            sp = np.random.randint(0, len(test_x[bd]) - self.seq_len_in - self.seq_len_out)
 
         # Append sample to batch
         batch_xe.append(test_x[bd][sp:sp + self.seq_len_in])

@@ -22,12 +22,12 @@ input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
 seq_len_out = 96
-plot_time_steps_view = 96 * 2
+plot_time_steps_view = 96
 steps_per_epoch = 10
 epochs = 40
 learning_rate = 0.00075
 intermediates = 1
-agg_level = 1
+agg_level = 75
 plot_loss = True
 
 # Load data
@@ -132,13 +132,39 @@ def plot_random_sample(models):
     """
     Plot a random sample with all the models predictions
     :param models: The models
-    :return:
     """
     predict_x_batches, predict_y_batches, predict_y_batches_prev = seq2seq.create_validation_sample()
     predictions = {}
 
     for model in models:
         prediction = model.predict(predict_x_batches[0], predict_x_batches[1], predict_y_batches, predict_y_batches_prev)
+        predictions[model.name] = denormalize(prediction, data_dict['output_std'], data_dict['output_mean'])
+
+    normalized_ys = np.concatenate([predict_y_batches_prev, predict_y_batches[0]])[-plot_time_steps_view:]
+
+    ys = denormalize(normalized_ys, data_dict['output_std'], data_dict['output_mean'])
+
+    plt.plot(range(0, plot_time_steps_view), ys, label="real")
+
+    for model_name in predictions.keys():
+        plt.plot(range(plot_time_steps_view - seq_len_out, plot_time_steps_view), predictions[model_name],
+                 label=model_name + " prediction")
+    plt.legend()
+    plt.title(label="predictions")
+    plt.show()
+
+
+def plot_random_day_sample(models):
+    """
+    Plot a random sample, from the start until the end of the day, with all the models predictions
+    :param models: The models
+    """
+    predict_x_batches, predict_y_batches, predict_y_batches_prev = seq2seq.create_validation_sample(is_start_of_day=True)
+    predictions = {}
+
+    for model in models:
+        prediction = model.predict(predict_x_batches[0], predict_x_batches[1], predict_y_batches,
+                                   predict_y_batches_prev)
         predictions[model.name] = denormalize(prediction, data_dict['output_std'], data_dict['output_mean'])
 
     normalized_ys = np.concatenate([predict_y_batches_prev, predict_y_batches[0]])[-plot_time_steps_view:]
@@ -476,13 +502,13 @@ if __name__ == "__main__":
     models.append(seq2seq_1dconv)
     models.append(ann)
 
-    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg75.pkl")
+    plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg75.pkl")
 
     # calculate_accuracy_per_time_step(models)
 
-    predict_all_validation_data(models)
+    # predict_all_validation_data(models)
     
-    # analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
+    analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
 
     # for model in models:
     #     model.model.summary()
@@ -492,6 +518,7 @@ if __name__ == "__main__":
     # losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
     #
     # plot_random_sample(models)
+    # plot_random_day_sample(models)
     #
     # for agg_lvl in agg_levels:
     #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
