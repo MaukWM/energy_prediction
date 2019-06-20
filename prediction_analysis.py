@@ -34,7 +34,7 @@ plot_loss = True
 data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak{}-b121.pkl".format(agg_level))
 
-load_weights = True
+load_weights = False
 if load_weights:
     load_ann_weights_path = "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
     load_s2s_weights_path = "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
@@ -198,6 +198,7 @@ def calculate_eval_loss_models(models):
             from keras.optimizers import SGD
             model.model.compile(SGD(1), metrics.root_mean_squared_error)
         model_loss = model.model.evaluate(predict_x_batches, predict_y_batches, batch_size=len(predict_y_batches))
+        print("model_loss", model_loss)
         losses[model] = model_loss
 
     return losses
@@ -237,7 +238,7 @@ def predict_all_validation_data(models, save=True):
     :param models: The models
     :return Dict containing the predicted and actual values of the all datapoints in the validation data
     """
-    slicing_point = 322*2
+    slicing_point = 1500
     test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=slicing_point)
 
     values_dict = dict()
@@ -280,7 +281,7 @@ def calculate_accuracy_per_time_step(models, plot=True, save=True):
     :param models: The models
     :return Dict containing the average RMSE of each model for each timestep.
     """
-    slicing_point = 322*2
+    slicing_point = 1500
     test_xe_batches, test_xd_batches, test_y_batches, test_y_batches_prev = models[0].create_validation_data_with_prev_y_steps(slice_point=slicing_point)
 
     rmse_dict = {}
@@ -364,9 +365,18 @@ def print_accuracy_measures(predictions, actuals):
     # Get total amount of observations
     n = np.size(predictions)
 
+    y_max = np.amax(actuals)
+    y_min = np.amin(actuals)
+
     # Mean error
     me = np.sum(predictions - actuals) / n
     print("ME: {0:.2f}".format(me))
+
+    temp = np.sum(np.square(predictions - actuals), axis=1)
+    temp = np.reshape(temp, newshape=len(temp))
+
+    plt.plot(np.cumsum(temp))
+    plt.show()
 
     # Root mean squared error
     rmse = math.sqrt(np.sum(np.square(predictions - actuals)) / n)
@@ -375,6 +385,10 @@ def print_accuracy_measures(predictions, actuals):
     # Mean absolute error
     mae = np.sum(abs(predictions - actuals)) / n
     print("MAE: {0:.2f}".format(mae))
+
+    # Normalized root mean squared error
+    nrmse = rmse / (y_max - y_min) * 100
+    print("NRMSE: {0:.2f}".format(nrmse))
 
 
 def analyze_predicted_and_actuals(path_to_data_folder):
@@ -385,6 +399,7 @@ def analyze_predicted_and_actuals(path_to_data_folder):
     pred_act_dict = dict()
     for filename in os.listdir(path_to_data_folder):
         if "predicted_and_actuals" in filename:
+            print("Loading", filename)
             data_tmp = open(os.path.join(path_to_data_folder, filename), "rb")
             # Ugly way to extract agg_level from filename
             agg_level = filename.split("-")[1].split(".")[0][3:]
@@ -502,7 +517,10 @@ if __name__ == "__main__":
     models.append(seq2seq_1dconv)
     models.append(ann)
 
-    plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg75.pkl")
+    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg1.pkl")
+    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg25.pkl")
+    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg50.pkl")
+    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg75.pkl")
 
     # calculate_accuracy_per_time_step(models)
 
@@ -510,10 +528,10 @@ if __name__ == "__main__":
     
     analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
 
-    # for model in models:
-    #     model.model.summary()
-    #
-    # print_nrmse_models(models)
+    for model in models:
+        model.model.summary()
+
+    print_nrmse_models(models)
     #
     # losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
     #
@@ -521,5 +539,5 @@ if __name__ == "__main__":
     # plot_random_day_sample(models)
     #
     # for agg_lvl in agg_levels:
-    #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
-    #     plot_loss_graph_training(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
+    #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=True)
+    #     plot_loss_graph_training(losses_dict, agg_lvl=agg_lvl, plot_ann=True)

@@ -45,12 +45,9 @@ class Ann(Model):
         dense1 = ks.layers.Dense(1024, activation='relu')
         dense1_out = dense1(input_flat)
 
-        dense2 = ks.layers.Dense(256, activation='relu')
+        dense2 = ks.layers.Dense(self.seq_len_out * self.output_feature_amount, activation='linear')
         dense2_out = dense2(dense1_out)
-
-        dense3 = ks.layers.Dense(self.seq_len_out * self.output_feature_amount, activation='linear')
-        dense3_out = dense3(dense2_out)
-        seq_out = Reshape((self.seq_len_out, self.output_feature_amount))(dense3_out)
+        seq_out = Reshape((self.seq_len_out, self.output_feature_amount))(dense2_out)
 
         model = ks.Model(inputs=[input_sequence, not_used], outputs=seq_out)
 
