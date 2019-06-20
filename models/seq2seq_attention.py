@@ -1,4 +1,4 @@
-from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed
+from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, GaussianNoise
 from tensorflow.python.keras.models import Model as tsModel
 from tensorflow.python.keras.optimizers import Adam
 
@@ -40,6 +40,9 @@ class Seq2SeqAttention(Model):
         x_enc = Input(shape=(self.seq_len_in, self.input_feature_amount), name="x_enc")
         x_dec = Input(shape=(self.seq_len_out, self.output_feature_amount), name="x_dec")
 
+        # Add noise
+        x_dec_t = GaussianNoise(0.2)(x_dec)
+
         # Define the encoder GRU, which only has to return a state
         encoder_gru = GRU(self.state_size, return_sequences=True, return_state=True, name="encoder_gru")
         encoder_out, encoder_state = encoder_gru(x_enc)
@@ -48,7 +51,7 @@ class Seq2SeqAttention(Model):
         decoder_gru = GRU(self.state_size, return_state=True, return_sequences=True,
                           name="decoder_gru")
         # Use these definitions to calculate the outputs of out encoder/decoder stack
-        dec_intermediates, decoder_state = decoder_gru(x_dec, initial_state=encoder_state)
+        dec_intermediates, decoder_state = decoder_gru(x_dec_t, initial_state=encoder_state)
 
         # Define the attention layer
         attn_layer = AttentionLayer(name="attention_layer")

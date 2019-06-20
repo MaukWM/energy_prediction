@@ -17,7 +17,7 @@ agg_levels = [1, 25, 50, 75]
 start_point_loss_graph = 25
 
 batch_size = 64
-state_size = 32
+state_size = 128
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
@@ -34,7 +34,7 @@ plot_loss = True
 data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak{}-b121.pkl".format(agg_level))
 
-load_weights = False
+load_weights = True
 if load_weights:
     load_ann_weights_path = "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
     load_s2s_weights_path = "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
@@ -475,41 +475,41 @@ if __name__ == "__main__":
               agg_level=agg_level
               )
 
-    seq2seq_attention = Seq2SeqAttention(name="seq2seq_attention",
-                                         data_dict=data_dict,
-                                         batch_size=batch_size,
-                                         state_size=state_size,
-                                         input_feature_amount=input_feature_amount,
-                                         output_feature_amount=output_feature_amount,
-                                         seq_len_in=seq_len_in,
-                                         seq_len_out=seq_len_out,
-                                         plot_time_steps_view=plot_time_steps_view,
-                                         steps_per_epoch=steps_per_epoch,
-                                         epochs=epochs,
-                                         learning_rate=learning_rate,
-                                         intermediates=intermediates,
-                                         plot_loss=plot_loss,
-                                         load_weights_path=load_s2s_attention_weights_path,
-                                         agg_level=agg_level
-                                         )
-
-    seq2seq_1dconv_attention = Seq2SeqConvAttention(name="seq2seq_1dconv_attention",
-                                                    data_dict=data_dict,
-                                                    batch_size=batch_size,
-                                                    state_size=state_size,
-                                                    input_feature_amount=input_feature_amount,
-                                                    output_feature_amount=output_feature_amount,
-                                                    seq_len_in=seq_len_in,
-                                                    seq_len_out=seq_len_out,
-                                                    plot_time_steps_view=plot_time_steps_view,
-                                                    steps_per_epoch=steps_per_epoch,
-                                                    epochs=epochs,
-                                                    learning_rate=learning_rate,
-                                                    intermediates=intermediates,
-                                                    plot_loss=plot_loss,
-                                                    load_weights_path=load_s2s_1dconv_attention_weights_path,
-                                                    agg_level=agg_level
-                                                    )
+    # seq2seq_attention = Seq2SeqAttention(name="seq2seq_attention",
+    #                                      data_dict=data_dict,
+    #                                      batch_size=batch_size,
+    #                                      state_size=state_size,
+    #                                      input_feature_amount=input_feature_amount,
+    #                                      output_feature_amount=output_feature_amount,
+    #                                      seq_len_in=seq_len_in,
+    #                                      seq_len_out=seq_len_out,
+    #                                      plot_time_steps_view=plot_time_steps_view,
+    #                                      steps_per_epoch=steps_per_epoch,
+    #                                      epochs=epochs,
+    #                                      learning_rate=learning_rate,
+    #                                      intermediates=intermediates,
+    #                                      plot_loss=plot_loss,
+    #                                      load_weights_path=load_s2s_attention_weights_path,
+    #                                      agg_level=agg_level
+    #                                      )
+    #
+    # seq2seq_1dconv_attention = Seq2SeqConvAttention(name="seq2seq_1dconv_attention",
+    #                                                 data_dict=data_dict,
+    #                                                 batch_size=batch_size,
+    #                                                 state_size=state_size,
+    #                                                 input_feature_amount=input_feature_amount,
+    #                                                 output_feature_amount=output_feature_amount,
+    #                                                 seq_len_in=seq_len_in,
+    #                                                 seq_len_out=seq_len_out,
+    #                                                 plot_time_steps_view=plot_time_steps_view,
+    #                                                 steps_per_epoch=steps_per_epoch,
+    #                                                 epochs=epochs,
+    #                                                 learning_rate=learning_rate,
+    #                                                 intermediates=intermediates,
+    #                                                 plot_loss=plot_loss,
+    #                                                 load_weights_path=load_s2s_1dconv_attention_weights_path,
+    #                                                 agg_level=agg_level
+    #                                                 )
 
     models.append(seq2seq_attention)
     models.append(seq2seq_1dconv_attention)

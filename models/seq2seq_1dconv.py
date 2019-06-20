@@ -1,5 +1,7 @@
 import pickle
 
+from keras.layers import GaussianNoise
+
 import metrics
 
 from models.model import Model
@@ -38,6 +40,9 @@ class Seq2SeqConv(Model):
         x_enc = ks.Input(shape=(self.seq_len_in, self.input_feature_amount), name="x_enc")
         x_dec = ks.Input(shape=(None, self.output_feature_amount), name="x_dec")
 
+        # Add noise
+        x_dec_t = GaussianNoise(0.2)(x_dec)
+
         input_conv2 = ks.layers.Conv1D(filters=64, kernel_size=5, strides=2, activation='relu', padding='same')(x_enc)
         input_conv1 = ks.layers.Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', padding='same')(input_conv2)
 
@@ -51,7 +56,7 @@ class Seq2SeqConv(Model):
         dec_dense = ks.layers.TimeDistributed(ks.layers.Dense(self.output_feature_amount, activation='linear'))
 
         # Use these definitions to calculate the outputs of out encoder/decoder stack
-        dec_intermediates, _ = dec_gru(x_dec, initial_state=state)
+        dec_intermediates, _ = dec_gru(x_dec_t, initial_state=state)
         # dec_intermediates = dec_dense2(dec_intermediates)
         dec_outs = dec_dense(dec_intermediates)
 

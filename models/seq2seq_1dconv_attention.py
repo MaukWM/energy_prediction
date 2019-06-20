@@ -1,4 +1,4 @@
-from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, Conv1D
+from tensorflow.python.keras.layers import Input, GRU, Dense, Concatenate, TimeDistributed, Conv1D, GaussianNoise
 from tensorflow.python.keras.models import Model as tsModel
 
 import metrics
@@ -39,6 +39,9 @@ class Seq2SeqConvAttention(Model):
         x_enc = Input(shape=(self.seq_len_in, self.input_feature_amount), name="x_enc")
         x_dec = Input(shape=(self.seq_len_out, self.output_feature_amount), name="x_dec")
 
+        # Add noise
+        x_dec_t = GaussianNoise(0.2)(x_dec)
+
         input_conv2 = Conv1D(filters=64, kernel_size=5, strides=2, activation='relu', padding='same')
         input_conv1 = Conv1D(filters=64, kernel_size=3, strides=2, activation='relu', padding='same', name="last_conv_layer")
 
@@ -53,7 +56,7 @@ class Seq2SeqConvAttention(Model):
         decoder_gru = GRU(self.state_size, return_state=True, return_sequences=True,
                                       name="decoder_gru")
         # Use these definitions to calculate the outputs of out encoder/decoder stack
-        dec_intermediates, decoder_state = decoder_gru(x_dec, initial_state=encoder_state)
+        dec_intermediates, decoder_state = decoder_gru(x_dec_t, initial_state=encoder_state)
 
         # Define the attention layer
         attn_layer = AttentionLayer(name="attention_layer")

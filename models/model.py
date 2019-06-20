@@ -312,23 +312,25 @@ class Model:
         from keras.losses import mean_squared_error
         if "attention" in self.name:
             from tensorflow.python.keras.optimizers import Adam
-            from tensorflow.python.keras.callbacks import ModelCheckpoint
+            from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
             self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
             checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1,
                                          save_best_only=True,
                                          save_weights_only=True)
+            early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=20)
         else:
-            from keras.callbacks import ModelCheckpoint
+            from keras.callbacks import ModelCheckpoint, EarlyStopping
             from keras.optimizers import Adam
             self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
             checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1,
                                          save_best_only=True,
                                          save_weights_only=True)
+            early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=20)
 
         history = None
 
         # Set checkpoint for saving model
-        callbacks_list = [checkpoint]
+        callbacks_list = [checkpoint, early_stop]
 
         for i in range(self.intermediates):
             try:

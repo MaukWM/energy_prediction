@@ -17,7 +17,7 @@ data_25a_path = os.path.join(data_path, "aggregated_input_data-f83-ak25-b121.pkl
 data_1a_path = os.path.join(data_path, "aggregated_input_data-f83-ak1-b121.pkl")
 
 batch_size = 128
-state_size = 32
+state_size = 128
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
