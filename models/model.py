@@ -193,7 +193,7 @@ class Model:
             # Grab a random starting point at the start of the day
             start_points = np.arange(0, len(test_x[0]), 96)
             sp = start_points[np.random.randint(0, len(start_points) - 1)]
-            print(sp)
+            print("Plotting model for building {} and starting point {}".format(bd, sp))
         else:
             # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
             sp = np.random.randint(0, len(test_x[bd]) - self.seq_len_in - self.seq_len_out)
@@ -313,24 +313,28 @@ class Model:
         if "attention" in self.name:
             from tensorflow.python.keras.optimizers import Adam
             from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
+            from callbacks.TimeHistory import TimeHistoryTf
             self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
             checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1,
                                          save_best_only=True,
                                          save_weights_only=True)
             early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=20)
+            time_callback = TimeHistoryTf()
         else:
-            from keras.callbacks import ModelCheckpoint, EarlyStopping
             from keras.optimizers import Adam
+            from keras.callbacks import ModelCheckpoint, EarlyStopping
+            from callbacks.TimeHistory import TimeHistoryKs
             self.model.compile(Adam(self.learning_rate), mean_squared_error, metrics=self.validation_metrics)
             checkpoint = ModelCheckpoint(filepath=model_saving_filepath, monitor='val_loss', verbose=1,
                                          save_best_only=True,
                                          save_weights_only=True)
             early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=20)
+            time_callback = TimeHistoryKs()
 
         history = None
 
         # Set checkpoint for saving model
-        callbacks_list = [checkpoint, early_stop]
+        callbacks_list = [checkpoint, time_callback]
 
         for i in range(self.intermediates):
             try:
@@ -359,7 +363,7 @@ class Model:
                                                                                      self.name,
                                                                                      np.amin(val_losses),
                                                                                      np.amin(train_losses)), "wb")
-        pickle.dump({"name": "{0}-agg{1}".format(self.name, self.agg_level), "train_losses": train_losses, "val_losses": val_losses}, history_file)
+        pickle.dump({"name": "{0}-agg{1}".format(self.name, self.agg_level), "train_losses": train_losses, "val_losses": val_losses, "times": time_callback.times}, history_file)
 
         # Return the history of the training session
         return histories

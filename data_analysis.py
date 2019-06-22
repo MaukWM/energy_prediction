@@ -11,6 +11,7 @@ pd.set_option('display.width', 1000)
 
 weather_columns = ['temperature', 'dew_point', 'humidity', 'visibility', 'apparent_temperature', 'pressure', 'wind_speed', 'cloud_cover', 'precip_intensity', 'precip_probability']
 
+
 def agg_data_and_visualize():
     """
     Aggregate all raw data into one week and display.
@@ -114,12 +115,19 @@ def show_agg_avg_data():
 
     ax = plt.subplot()
 
+    # removing top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # adds major gridlines
+    ax.grid(color='grey', linestyle='-', linewidth=0.25, alpha=0.5)
+
     ax.plot(x, y, color='black', linewidth=0.6)
     ax.xaxis.set_major_locator(HourLocator(interval=3))
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
     ax.xaxis.set_ticks([customdate + datetime.timedelta(hours=i * 3) for i in range(int(24 / 3) + 1)])
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Average energy use")
+    ax.set_xlabel("Time (15-min interval)")
+    ax.set_ylabel("Average energy use [kWh]")
 
     plt.show()
 
@@ -141,8 +149,8 @@ def calc_mean_and_range_columns(path_to_data, columns):
 res_dict = calc_mean_and_range_columns(path_to_data="/home/mauk/Workspace/energy_prediction/data/weather1415.csv",
                                        columns=weather_columns)
 
-for item in res_dict:
-    print(item, res_dict[item])
+# for item in res_dict:
+#     print(item, res_dict[item])
 
-# show_agg_avg_data()
+show_agg_avg_data()
 # agg_use_data_into_day()

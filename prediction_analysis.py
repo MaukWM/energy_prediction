@@ -14,15 +14,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 agg_levels = [1, 25, 50, 75]
-start_point_loss_graph = 25
+start_point_loss_graph = 2
 
 batch_size = 64
 state_size = 128
 input_feature_amount = 83
 output_feature_amount = 1
 seq_len_in = 96
-seq_len_out = 96
-plot_time_steps_view = 96
+seq_len_out = 96 * 4
+plot_time_steps_view = 96 * 5
 steps_per_epoch = 10
 epochs = 40
 learning_rate = 0.00075
@@ -34,13 +34,15 @@ plot_loss = True
 data_dict = load_data(
     "/home/mauk/Workspace/energy_prediction/data/prepared/aggregated_1415/aggregated_input_data-f83-ak{}-b121.pkl".format(agg_level))
 
+weights_folder = "/home/mauk/Workspace/energy_prediction/DataForPaper/"
+
 load_weights = True
 if load_weights:
-    load_ann_weights_path = "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
-    load_s2s_weights_path = "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
-    load_s2s_1dconv_weights_path = "seq2seq_1dconv-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
-    load_s2s_attention_weights_path = "seq2seq_attention-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
-    load_s2s_1dconv_attention_weights_path = "seq2seq_1dconv_attention-ss{}-agg{}-best_weights.h5".format(state_size, agg_level)
+    load_ann_weights_path = os.path.join(weights_folder, "ann-ss{}-agg{}-best_weights.h5".format(state_size, agg_level))
+    load_s2s_weights_path = os.path.join(weights_folder, "seq2seq-ss{}-agg{}-best_weights.h5".format(state_size, agg_level))
+    load_s2s_1dconv_weights_path = os.path.join(weights_folder, "seq2seq_1dconv-ss{}-agg{}-best_weights.h5".format(state_size, agg_level))
+    load_s2s_attention_weights_path = os.path.join(weights_folder, "seq2seq_attention-ss{}-agg{}-best_weights.h5".format(state_size, agg_level))
+    load_s2s_1dconv_attention_weights_path = os.path.join(weights_folder, "seq2seq_1dconv_attention-ss{}-agg{}-best_weights.h5".format(state_size, agg_level))
 else:
     load_ann_weights_path = None
     load_s2s_weights_path = None
@@ -93,18 +95,32 @@ def plot_loss_graph_validation(losses_dict_list, agg_lvl=None, plot_ann=False):
     Plot all validation losses from a losses dict
     :param losses_dict_list: Dict containing validation losses
     """
+    ax = plt.subplot()
+
+    # removing top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # adds major gridlines
+    ax.grid(color='grey', linestyle='-', linewidth=0.25, alpha=0.5)
+
+    # Set the labels
+    ax.set_xlabel("Epochs [#]")
+    ax.set_ylabel("Accuracy")
+
     for loss_dict in losses_dict_list:
         if agg_lvl:
             if str(agg_lvl) in loss_dict['name'].split("-")[1]:
                 if "ann" in loss_dict['name'] and not plot_ann:
                     continue
-                plt.plot(loss_dict['val_losses'][start_point_loss_graph:], label=loss_dict['name'])
+                ax.plot(loss_dict['val_losses'][start_point_loss_graph:], label=loss_dict['name'], linewidth=0.8)
         else:
             if "ann" in loss_dict['name'] and not plot_ann:
                 continue
-            plt.plot(loss_dict['val_losses'][start_point_loss_graph:], label=loss_dict['name'])
-    plt.legend()
-    plt.title(label="validation losses")
+            ax.plot(loss_dict['val_losses'][start_point_loss_graph:], label=loss_dict['name'], linewidth=0.8)
+    ax.legend()
+    ax.set_title(label="Validation losses")
+
     plt.show()
 
 
@@ -125,6 +141,38 @@ def plot_loss_graph_training(losses_dict_list, agg_lvl=None, plot_ann=False):
             plt.plot(loss_dict['train_losses'][start_point_loss_graph:], label=loss_dict['name'])
     plt.legend()
     plt.title(label="training losses")
+    plt.show()
+
+
+def analyse_training_time_per_epoch(histories):
+    """
+    Plot all training losses from a losses dict
+    :param histories, containing the training times
+    """
+    # print(histories)
+    ax = plt.subplot()
+    ax.set_ylabel("Computation time per epoch")
+    names = []
+    means = []
+    sds = []
+    for history in histories:
+        # Change name so it's more readable
+        name_temp = history['name']
+        if "ann" in name_temp:
+            name = "ann"
+        elif "seq2seq" in name_temp:
+            name = "s2s"
+            if "1dconv" in name_temp:
+                name = name + "-1d"
+            if "attention" in name_temp:
+                name = name + "-a"
+        print(name, np.mean(history['times']), np.std(history['times']))
+        names.append(name)
+        means.append(np.mean(history['times']))
+        sds.append(np.std(history['times']))
+
+    ax.errorbar(names, means, sds, linestyle='None', marker=".", barsabove=True)
+
     plt.show()
 
 
@@ -171,13 +219,27 @@ def plot_random_day_sample(models):
 
     ys = denormalize(normalized_ys, data_dict['output_std'], data_dict['output_mean'])
 
-    plt.plot(range(0, plot_time_steps_view), ys, label="real")
+    ax = plt.subplot()
+
+    # removing top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # adds major gridlines
+    ax.grid(color='grey', linestyle='-', linewidth=0.25, alpha=0.5)
+
+    # Set labels
+    ax.set_xlabel("Time (15-min interval)")
+    ax.set_ylabel("Energy use [kWh]")
+
+    ax.plot(range(0, plot_time_steps_view), ys, label="real", linewidth=0.8)
 
     for model_name in predictions.keys():
-        plt.plot(range(plot_time_steps_view - seq_len_out, plot_time_steps_view), predictions[model_name],
-                 label=model_name + " prediction")
-    plt.legend()
-    plt.title(label="predictions")
+        ax.plot(range(plot_time_steps_view - seq_len_out, plot_time_steps_view), predictions[model_name],
+                label=model_name + " prediction", linewidth=0.8)
+
+    ax.legend()
+
     plt.show()
 
 
@@ -341,12 +403,21 @@ def plot_accuracy_per_time_step(path_to_rmse_dict):
     data_tmp = open(path_to_rmse_dict, "rb")
     rmse_dict = pickle.load(data_tmp)
 
-    plt.title("RMSE for aggregation level {}".format(agg_level))
-    plt.xlabel("Timestep (15 min)")
-    plt.ylabel("Average RMSE")
+    ax = plt.subplot()
+
+    # removing top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # adds major gridlines
+    ax.grid(color='grey', linestyle='-', linewidth=0.25, alpha=0.5)
+
+    ax.set_title("RMSE for aggregation level {}".format(agg_level))
+    ax.set_xlabel("Timestep (15 min)")
+    ax.set_ylabel("Average RMSE")
 
     for model in rmse_dict.keys():
-        plt.plot(rmse_dict[model][0], label=model)
+        ax.plot(rmse_dict[model][0], label=model, linewidth=0.80)
 
     plt.legend()
     plt.show()
@@ -368,27 +439,31 @@ def print_accuracy_measures(predictions, actuals):
     y_max = np.amax(actuals)
     y_min = np.amin(actuals)
 
-    # Mean error
-    me = np.sum(predictions - actuals) / n
-    print("ME: {0:.2f}".format(me))
-
-    temp = np.sum(np.square(predictions - actuals), axis=1)
-    temp = np.reshape(temp, newshape=len(temp))
-
-    plt.plot(np.cumsum(temp))
-    plt.show()
-
     # Root mean squared error
     rmse = math.sqrt(np.sum(np.square(predictions - actuals)) / n)
     print("RMSE: {0:.2f}".format(rmse))
 
-    # Mean absolute error
-    mae = np.sum(abs(predictions - actuals)) / n
-    print("MAE: {0:.2f}".format(mae))
-
     # Normalized root mean squared error
     nrmse = rmse / (y_max - y_min) * 100
     print("NRMSE: {0:.2f}".format(nrmse))
+
+    # Mean error
+    me = np.sum(predictions - actuals) / n
+    print("ME: {0:.2f}".format(me))
+
+    # Standard deviation
+    sd = np.std(predictions - actuals)
+    print("SD: {0:.2f}".format(sd))
+
+    # temp = np.sum(np.square(predictions - actuals), axis=1)
+    # temp = np.reshape(temp, newshape=len(temp))
+    #
+    # plt.plot(np.cumsum(temp))
+    # plt.show()
+
+    # Mean absolute error
+    mae = np.sum(abs(predictions - actuals)) / n
+    print("MAE: {0:.2f}".format(mae))
 
 
 def analyze_predicted_and_actuals(path_to_data_folder):
@@ -475,41 +550,41 @@ if __name__ == "__main__":
               agg_level=agg_level
               )
 
-    # seq2seq_attention = Seq2SeqAttention(name="seq2seq_attention",
-    #                                      data_dict=data_dict,
-    #                                      batch_size=batch_size,
-    #                                      state_size=state_size,
-    #                                      input_feature_amount=input_feature_amount,
-    #                                      output_feature_amount=output_feature_amount,
-    #                                      seq_len_in=seq_len_in,
-    #                                      seq_len_out=seq_len_out,
-    #                                      plot_time_steps_view=plot_time_steps_view,
-    #                                      steps_per_epoch=steps_per_epoch,
-    #                                      epochs=epochs,
-    #                                      learning_rate=learning_rate,
-    #                                      intermediates=intermediates,
-    #                                      plot_loss=plot_loss,
-    #                                      load_weights_path=load_s2s_attention_weights_path,
-    #                                      agg_level=agg_level
-    #                                      )
-    #
-    # seq2seq_1dconv_attention = Seq2SeqConvAttention(name="seq2seq_1dconv_attention",
-    #                                                 data_dict=data_dict,
-    #                                                 batch_size=batch_size,
-    #                                                 state_size=state_size,
-    #                                                 input_feature_amount=input_feature_amount,
-    #                                                 output_feature_amount=output_feature_amount,
-    #                                                 seq_len_in=seq_len_in,
-    #                                                 seq_len_out=seq_len_out,
-    #                                                 plot_time_steps_view=plot_time_steps_view,
-    #                                                 steps_per_epoch=steps_per_epoch,
-    #                                                 epochs=epochs,
-    #                                                 learning_rate=learning_rate,
-    #                                                 intermediates=intermediates,
-    #                                                 plot_loss=plot_loss,
-    #                                                 load_weights_path=load_s2s_1dconv_attention_weights_path,
-    #                                                 agg_level=agg_level
-    #                                                 )
+    seq2seq_attention = Seq2SeqAttention(name="seq2seq_attention",
+                                         data_dict=data_dict,
+                                         batch_size=batch_size,
+                                         state_size=state_size,
+                                         input_feature_amount=input_feature_amount,
+                                         output_feature_amount=output_feature_amount,
+                                         seq_len_in=seq_len_in,
+                                         seq_len_out=seq_len_out,
+                                         plot_time_steps_view=plot_time_steps_view,
+                                         steps_per_epoch=steps_per_epoch,
+                                         epochs=epochs,
+                                         learning_rate=learning_rate,
+                                         intermediates=intermediates,
+                                         plot_loss=plot_loss,
+                                         load_weights_path=load_s2s_attention_weights_path,
+                                         agg_level=agg_level
+                                         )
+
+    seq2seq_1dconv_attention = Seq2SeqConvAttention(name="seq2seq_1dconv_attention",
+                                                    data_dict=data_dict,
+                                                    batch_size=batch_size,
+                                                    state_size=state_size,
+                                                    input_feature_amount=input_feature_amount,
+                                                    output_feature_amount=output_feature_amount,
+                                                    seq_len_in=seq_len_in,
+                                                    seq_len_out=seq_len_out,
+                                                    plot_time_steps_view=plot_time_steps_view,
+                                                    steps_per_epoch=steps_per_epoch,
+                                                    epochs=epochs,
+                                                    learning_rate=learning_rate,
+                                                    intermediates=intermediates,
+                                                    plot_loss=plot_loss,
+                                                    load_weights_path=load_s2s_1dconv_attention_weights_path,
+                                                    agg_level=agg_level
+                                                    )
 
     models.append(seq2seq_attention)
     models.append(seq2seq_1dconv_attention)
@@ -517,27 +592,27 @@ if __name__ == "__main__":
     models.append(seq2seq_1dconv)
     models.append(ann)
 
-    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg1.pkl")
-    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg25.pkl")
-    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg50.pkl")
-    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/avg_rmse_timesteps-agg75.pkl")
+    # plot_accuracy_per_time_step("/home/mauk/Workspace/energy_prediction/DataForPaper/avg_rmse_timesteps-agg{}-sp1500.pkl".format(agg_level))
 
     # calculate_accuracy_per_time_step(models)
 
     # predict_all_validation_data(models)
     
-    analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
+    # analyze_predicted_and_actuals(path_to_data_folder="/home/mauk/Workspace/energy_prediction/")
 
-    for model in models:
-        model.model.summary()
+    # for model in models:
+    #     model.model.summary()
 
-    print_nrmse_models(models)
+    # print_nrmse_models(models)
     #
-    # losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/")
+    # losses_dict = load_losses("/home/mauk/Workspace/energy_prediction/history_with_times")
     #
+    # TODO: Make plot lines more thin
     # plot_random_sample(models)
-    # plot_random_day_sample(models)
+    plot_random_day_sample(models)
     #
     # for agg_lvl in agg_levels:
-    #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=True)
-    #     plot_loss_graph_training(losses_dict, agg_lvl=agg_lvl, plot_ann=True)
+    #     plot_loss_graph_validation(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
+    #     plot_loss_graph_training(losses_dict, agg_lvl=agg_lvl, plot_ann=False)
+
+    # analyse_training_time_per_epoch(losses_dict)

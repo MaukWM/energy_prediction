@@ -47,12 +47,19 @@ def visualize_column_24hour(path_to_data, column_name):
 
     ax = plt.subplot()
 
+    # removing top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # adds major gridlines
+    ax.grid(color='grey', linestyle='-', linewidth=0.25, alpha=0.5)
+
     ax.plot(x, y, color='black', linewidth=0.6)
     ax.xaxis.set_major_locator(HourLocator(interval=3))
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
     ax.xaxis.set_ticks([customdate + datetime.timedelta(hours=i*3) for i in range(int(24 / 3) + 1)])
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Energy use")
+    ax.set_xlabel("Time (15-min interval)")
+    ax.set_ylabel("Energy use [kWh]")
 
     # beautify the x-labels
     # plt.gcf().autofmt_xdate()
