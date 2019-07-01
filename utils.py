@@ -40,6 +40,9 @@ def plot_attention_weights(attention_weights):
     """
     plt.matshow(attention_weights)
 
+    plt.xlabel("Attention at time-step t", labelpad=10)
+    plt.ylabel("Encoder intermediate state")
+
     plt.show()
 
     attention_weights.transpose()

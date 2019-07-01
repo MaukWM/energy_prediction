@@ -162,6 +162,82 @@ class Model:
 
         return [batch_xe, batch_xd], batch_y
 
+    def create_validation_sample_with_startpoint(self, building, starting_point):
+        """
+        Create a single validation sample, given a building number and starting point
+        :param: Building id
+        :param: Starting point
+        :return: Validation sample
+        """
+        # Split into testing set
+        if hasattr(self.normalized_input_data, 'shape') and hasattr(self.normalized_output_data, 'shape'):
+            test_x = self.normalized_input_data[:, -self.normalized_input_data.shape[1] // int((1 / self.test_train_ratio)):]
+            test_y = self.normalized_output_data[:, -self.normalized_output_data.shape[1] // int((1 / self.test_train_ratio)):]
+        else:
+            test_x = []
+            test_y = []
+            for building in self.normalized_input_data:
+                test_x.append(building[-int(len(building) * self.test_train_ratio):])
+            for building in self.normalized_output_data:
+                test_y.append(building[-int(len(building) * self.test_train_ratio):])
+
+        # Batch input for encoder
+        batch_xe = []
+        # Batch input for decoder for guided training
+        batch_xd = []
+        # Batch output
+        batch_y = []
+
+        # Select a random building from the training set
+        bd = building
+        sp = starting_point
+
+        # Append sample to batch
+        batch_xe.append(test_x[bd][sp:sp + self.seq_len_in])
+        batch_xd.append(test_y[bd][sp + self.seq_len_in - 1:sp + self.seq_len_in + self.seq_len_out - 1])
+        batch_y.append(test_y[bd][sp + self.seq_len_in:sp + self.seq_len_in + self.seq_len_out])
+
+        # Output during input frames
+        batch_y_prev = test_y[bd][sp:sp + self.seq_len_in]
+
+        # Stack batches and return them
+        batch_xe = np.stack(batch_xe)
+        batch_xd = np.stack(batch_xd)
+        batch_y = np.stack(batch_y)
+
+        return [batch_xe, batch_xd], batch_y, batch_y_prev
+
+    def generate_bd_and_sp(self, is_start_of_day):
+        """
+        Generate a random building and starting point, can be used to select validation sample starting point
+        :return: (building_id, starting_point)
+        """
+        # Split into testing set (Ugly but I'm lazy)
+        if hasattr(self.normalized_input_data, 'shape') and hasattr(self.normalized_output_data, 'shape'):
+            test_x = self.normalized_input_data[:, -self.normalized_input_data.shape[1] // int((1 / self.test_train_ratio)):]
+            test_y = self.normalized_output_data[:, -self.normalized_output_data.shape[1] // int((1 / self.test_train_ratio)):]
+        else:
+            test_x = []
+            test_y = []
+            for building in self.normalized_input_data:
+                test_x.append(building[-int(len(building) * self.test_train_ratio):])
+            for building in self.normalized_output_data:
+                test_y.append(building[-int(len(building) * self.test_train_ratio):])
+
+        # Select a random building from the training set
+        bd = np.random.randint(0, len(test_x))
+
+        if is_start_of_day:
+            # Grab a random starting point at the start of the day
+            start_points = np.arange(0, len(test_x[0]), 96)
+            sp = start_points[np.random.randint(0, len(start_points) - 1)]
+            print("Plotting model for building {} and starting point {}".format(bd, sp))
+        else:
+            # Grab a random starting point from 0 to length of dataset - input length encoder - input length decoder
+            sp = np.random.randint(0, len(test_x[bd]) - self.seq_len_in - self.seq_len_out)
+
+        return bd, sp
+
     def create_validation_sample(self, is_start_of_day=False):
         """
         Create a single validation sample, can be used to make predictions
